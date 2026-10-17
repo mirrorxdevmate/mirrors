@@ -48,3 +48,4 @@ example
 supabase/.temp
 .claude/launch.json
 supabase/.secrets.local
+handover/
