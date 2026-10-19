@@ -1,11 +1,12 @@
 import { Feather } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CityPicker } from '@/components/CityPicker';
-import { Locked } from '@/components/Locked';
-import { Badge, Button, Card, Header, Row, Screen, SectionLabel, T } from '@/components/ui';
+import { Badge, Button, Header, LinkButton, Row, Screen, T } from '@/components/ui';
 import { planAtLeast, useApp } from '@/store/useApp';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 export default function Discovery() {
   const plan = useApp((s) => s.plan);
@@ -17,43 +18,37 @@ export default function Discovery() {
   const [picker, setPicker] = useState(false);
 
   return (
-    <Screen scroll>
-      <Header title="Discovery location" />
-      <Row style={{ marginBottom: 4 }}>
-        <T v="h2" style={{ flex: 1 }}>
-          See people in other places
-        </T>
+    <Screen scroll footer={unlocked ? undefined : <Button title="See plans" onPress={() => router.push({ pathname: '/upgrade/plans', params: { plan: 'plus' } })} />}>
+      <Header title="Discovery location" big={false} />
+      <Row gap={10} style={{ marginTop: 24 }}>
+        <Text style={st.h1}>See people in other places</Text>
         {!unlocked ? <Badge kind="plus" /> : null}
       </Row>
-      <T v="body" color={colors.grey700} style={{ marginBottom: 20 }}>
+      <T v="body" color={colors.grey700} style={{ marginTop: 12 }}>
         Browse introductions outside your local area, now.
       </T>
-      <SectionLabel>Current city</SectionLabel>
-      <Card style={{ marginBottom: 16 }}>
-        <Row>
-          <Feather name="map-pin" size={16} color={colors.grey700} />
-          <T v="bodyM">
-            {(city || 'Dubai').split(',')[0]} · within {distance} km
-          </T>
-        </Row>
-      </Card>
-      <SectionLabel>Explore another city</SectionLabel>
-      {unlocked ? (
-        <>
-          <Card onPress={() => setPicker(true)}>
-            <Row>
-              <Feather name="search" size={16} color={colors.grey600} />
-              <T v="body" color={discoveryCity ? colors.grey900 : colors.grey500}>
-                {discoveryCity ?? 'Search a city'}
-              </T>
-            </Row>
-          </Card>
-          {discoveryCity ? <Button title="Back to my city" variant="ghost" onPress={() => updateSettings({ discoveryCity: null })} /> : null}
-        </>
-      ) : (
-        <Locked need="plus" text="Global Discovery is part of Mirror+." />
-      )}
+      <View style={st.current}>
+        <Text style={st.label}>Current city</Text>
+        <T v="body" color={colors.grey700}>
+          {(city || 'Dubai').split(',')[0]} · within {distance} km
+        </T>
+      </View>
+      <Text style={[st.label, { marginTop: 24 }]}>Explore another city</Text>
+      <Pressable accessibilityRole="button" disabled={!unlocked} onPress={() => setPicker(true)} style={[st.search, !unlocked && { opacity: 0.6 }]}>
+        <Feather name="search" size={14} color={colors.grey600} />
+        <T v="body" color={discoveryCity ? colors.grey900 : colors.grey600}>
+          {discoveryCity ?? 'Search a city'}
+        </T>
+      </Pressable>
+      {discoveryCity ? <LinkButton title="Back to my city" style={{ marginTop: 16 }} onPress={() => updateSettings({ discoveryCity: null })} /> : null}
       <CityPicker visible={picker} onClose={() => setPicker(false)} onPick={(c) => updateSettings({ discoveryCity: c })} />
     </Screen>
   );
 }
+
+const st = StyleSheet.create({
+  h1: { fontFamily: fonts.heading, fontSize: 24, lineHeight: 28, color: colors.grey900, flexShrink: 1 },
+  label: { fontFamily: fonts.bodySemi, fontSize: 14, lineHeight: 20, color: colors.grey900 },
+  current: { marginTop: 16, backgroundColor: colors.base, borderRadius: 12, padding: 12, gap: 4 },
+  search: { marginTop: 12, height: 48, borderRadius: 360, backgroundColor: colors.base, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16 },
+});

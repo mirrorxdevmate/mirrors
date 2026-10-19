@@ -1,11 +1,11 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, TextInput } from 'react-native';
+import { Platform, Pressable, StyleSheet, TextInput } from 'react-native';
 
 import { StepScreen } from '@/components/step';
-import { Card, T } from '@/components/ui';
+import { T } from '@/components/ui';
 import { useApp } from '@/store/useApp';
-import { colors, fonts, radius } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 const EXAMPLES = ['Building toward marriage.', 'Dating intentionally but taking my time.'];
 
@@ -29,26 +29,32 @@ export default function IntentDetail() {
         value={text}
         onChangeText={setText}
         placeholder="Write a sentence or two…"
-        placeholderTextColor={colors.grey500}
+        placeholderTextColor={colors.grey600}
         multiline
         maxLength={200}
-        style={{ minHeight: 120, backgroundColor: colors.base, borderRadius: radius.md, padding: 16, fontFamily: fonts.body, fontSize: 15, color: colors.grey900, textAlignVertical: 'top' }}
+        accessibilityLabel="What does that mean to you?"
+        style={[st.area, Platform.OS === 'web' && ({ outlineStyle: 'none' } as object)]}
       />
-      <T v="caption" color={colors.grey600} style={{ alignSelf: 'flex-end', marginTop: 6 }}>
-        {text.length}/200
-      </T>
-      <T v="overline" color={colors.grey600} style={{ marginTop: 16, marginBottom: 8 }}>
-        For example
+      <T v="body" color={colors.grey700} style={{ marginTop: 16 }}>
+        FOR EXAMPLE
       </T>
       {EXAMPLES.map((e) => (
-        <Pressable key={e} onPress={() => setText(e)} accessibilityRole="button" accessibilityHint="Use this example">
-          <Card style={{ marginBottom: 8 }}>
-            <T v="body" color={colors.grey800}>
-              &ldquo;{e}&rdquo;
-            </T>
-          </Card>
+        <Pressable
+          key={e}
+          onPress={() => setText(e)}
+          accessibilityRole="button"
+          accessibilityHint="Use this example"
+          style={({ pressed }) => [st.example, pressed && { opacity: 0.6 }]}>
+          <T v="body" color={colors.grey700}>
+            &quot;{e}&quot;
+          </T>
         </Pressable>
       ))}
     </StepScreen>
   );
 }
+
+const st = StyleSheet.create({
+  area: { height: 166, backgroundColor: colors.base, borderRadius: 16, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10, fontFamily: fonts.body, fontSize: 14, lineHeight: 20, color: colors.grey900, textAlignVertical: 'top' },
+  example: { minHeight: 42, borderRadius: 360, borderWidth: 1, borderColor: colors.grey500, paddingHorizontal: 17, justifyContent: 'center', marginTop: 16 },
+});

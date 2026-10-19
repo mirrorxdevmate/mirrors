@@ -1,86 +1,104 @@
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { Profile } from '@/data/profiles';
-import { colors, radius } from '@/theme';
-import { Chip, Row, T, VerifiedTick } from './ui';
+import { colors, fonts, radius } from '@/theme';
+import { AppIcon } from './appIcons';
+import { Glyph } from './designIcons';
+import { ChevronLeft } from './icons';
+import { Row, T } from './ui';
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
-export const Fact = ({ icon, label, color = colors.grey900, compact }: { icon: IconName; label: string; color?: string; compact?: boolean }) => (
-  <Row gap={6} style={compact ? undefined : { minWidth: '45%' }}>
-    <MaterialCommunityIcons name={icon} size={15} color={color} />
-    <T v="body" color={color}>
+/** One fact row (icon + Inter 14). `icon` may be a Figma glyph element or a vector-icon name. */
+export const Fact = ({ icon, label, color = colors.grey900, compact }: { icon: IconName | React.ReactNode; label: string; color?: string; compact?: boolean }) => (
+  <Row gap={8} style={compact ? undefined : { width: '50%', height: 23 }}>
+    {typeof icon === 'string' ? <MaterialCommunityIcons name={icon as IconName} size={15} color={color} /> : icon}
+    <T v="body" color={color} numberOfLines={1} style={{ flexShrink: 1 }}>
       {label}
     </T>
   </Row>
 );
 
+/** Small verified seal from the design (blue rosette with a tick). */
+export const Verified = ({ size = 16 }: { size?: number }) => <AppIcon name="verified" size={size} />;
+
+/** Expanded introduction card (HOME / INTRODUCTIONS scrolled). */
 export function ProfileDetail({ p, onWhy }: { p: Profile; onWhy?: () => void }) {
+  const tags = [p.faith, p.culture, p.education].filter(Boolean);
   return (
     <View>
-      <Row gap={6}>
-        <T v="h2">
+      <Row gap={12}>
+        <Text style={s.name}>
           {p.name}, {p.age}
-        </T>
-        {p.verified ? <VerifiedTick size={18} /> : null}
+        </Text>
+        {p.verified ? <Verified /> : null}
       </Row>
-      <Row gap={6} style={{ marginTop: 6 }}>
-        <MaterialCommunityIcons name="briefcase-outline" size={15} color={colors.grey800} />
-        <T v="body">{p.profession}</T>
-      </Row>
-      <Row gap={6} style={{ marginTop: 6 }}>
-        <Feather name="map-pin" size={13} color={colors.grey600} />
-        <T v="caption" color={colors.grey600}>
-          {p.city}{p.distanceKm != null ? `, ${p.distanceKm} km` : ''}
-        </T>
+      {p.profession ? (
+        <Row gap={8} style={{ marginTop: 8 }}>
+          <AppIcon name="job" height={13} />
+          <Text style={s.job}>{p.profession}</Text>
+        </Row>
+      ) : null}
+      <Row gap={8} style={{ marginTop: 8 }}>
+        <AppIcon name="pin" height={14} />
+        <Text style={s.loc}>
+          {p.city}
+          {p.distanceKm != null ? `, ${p.distanceKm} km` : ''}
+        </Text>
       </Row>
       <View style={s.facts}>
-        <Fact icon="human-male-height" label={`${p.heightCm}cm`} />
-        <Fact icon="target" label={p.intent} />
-        <Fact icon="glass-wine" label={p.drinking} />
-        <Fact icon="smoking-off" label={p.smoking} />
-        <Fact icon="baby-face-outline" label={p.children} />
-        <Fact icon="paw-outline" label={p.pets} />
+        <Fact icon={<AppIcon name="height" height={15} />} label={`${p.heightCm}cm`} />
+        <Fact icon={<AppIcon name="intent" height={15} />} label={p.intent} />
+        <Fact icon={<Glyph name="Drinking" color={colors.grey900} height={17} />} label={p.drinking} />
+        <Fact icon={<Glyph name="Smoking" color={colors.grey900} height={14} />} label={p.smoking} />
+        <Fact icon={<AppIcon name="children" height={13} />} label={p.children} />
+        <Fact icon={<Glyph name="Pets" color={colors.grey900} height={14} />} label={p.pets} />
       </View>
-      <T v="bodyS" style={{ marginTop: 16 }}>
-        About
-      </T>
-      <T v="body" style={{ marginTop: 6 }}>
+      <Text style={s.h}>About</Text>
+      <T v="body" style={{ marginTop: 8 }}>
         {p.about}
       </T>
-      <View style={[s.wrap, { marginTop: 10 }]}>
-        {[p.faith, p.culture, p.education].filter(Boolean).map((x) => (
-          <T key={x} v="body" style={{ marginRight: 14 }}>
-            {x}
-          </T>
-        ))}
-      </View>
-      <T v="overline" color={colors.grey600} style={{ marginTop: 14, marginBottom: 6 }}>
-        Values
-      </T>
-      <View style={s.wrap}>
-        {p.values.map((v) => (
-          <Chip key={v} label={v} small />
-        ))}
-      </View>
-      <T v="overline" color={colors.grey600} style={{ marginTop: 14, marginBottom: 6 }}>
-        Hobbies
-      </T>
-      <View style={s.wrap}>
-        {p.hobbies.map((v) => (
-          <Chip key={v} label={v} small />
-        ))}
-      </View>
+      {tags.length ? (
+        <View style={[s.wrap, { marginTop: 8 }]}>
+          {tags.map((x) => (
+            <View key={x} style={s.tag}>
+              <T v="body">{x}</T>
+            </View>
+          ))}
+        </View>
+      ) : null}
+      {p.values.length ? (
+        <>
+          <Text style={s.label}>VALUES</Text>
+          <View style={s.wrap}>
+            {p.values.map((v) => (
+              <View key={v} style={s.chip}>
+                <T v="body">{v}</T>
+              </View>
+            ))}
+          </View>
+        </>
+      ) : null}
+      {p.hobbies.length ? (
+        <>
+          <Text style={s.label}>HOBBIES</Text>
+          <View style={s.wrap}>
+            {p.hobbies.map((v) => (
+              <View key={v} style={s.chip}>
+                <T v="body">{v}</T>
+              </View>
+            ))}
+          </View>
+        </>
+      ) : null}
       {onWhy ? (
         <Pressable accessibilityRole="button" onPress={onWhy} style={({ pressed }) => [s.whyRow, pressed && { opacity: 0.8 }]}>
-          <T v="bodyM" style={{ flex: 1 }}>
-            Why you two?
-          </T>
+          <Text style={[s.job, { flex: 1 }]}>Why you two?</Text>
           <View style={s.whyBtn}>
-            <Feather name="chevron-right" size={20} color={colors.white} />
+            <ChevronRight />
           </View>
         </Pressable>
       ) : null}
@@ -88,6 +106,12 @@ export function ProfileDetail({ p, onWhy }: { p: Profile; onWhy?: () => void }) 
     </View>
   );
 }
+
+const ChevronRight = () => (
+  <View style={{ transform: [{ scaleX: -1 }] }}>
+    <ChevronLeft color={colors.white} />
+  </View>
+);
 
 export const Avatar = ({ uri, size = 48, ring }: { uri?: string; size?: number; ring?: boolean }) => (
   <View style={ring ? { padding: 2, borderRadius: size, borderWidth: 2, borderColor: colors.primary } : undefined}>
@@ -102,9 +126,16 @@ export const Avatar = ({ uri, size = 48, ring }: { uri?: string; size?: number; 
 );
 
 const s = StyleSheet.create({
-  facts: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10, columnGap: 12, marginTop: 14 },
+  name: { fontFamily: fonts.heading, fontSize: 24, lineHeight: 28, color: colors.grey900 },
+  job: { fontFamily: fonts.bodyMedium, fontSize: 14, lineHeight: 20, color: colors.grey900 },
+  loc: { fontFamily: fonts.bodyMedium, fontSize: 12, lineHeight: 20, color: colors.grey600 },
+  facts: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 8, marginTop: 18 },
+  h: { fontFamily: fonts.bodySemi, fontSize: 14, lineHeight: 16, color: colors.grey900, marginTop: 17 },
+  label: { fontFamily: fonts.body, fontSize: 12, lineHeight: 20, color: colors.grey600, marginTop: 16, marginBottom: 8 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  tag: { height: 26, borderRadius: 360, backgroundColor: colors.white, paddingHorizontal: 8, justifyContent: 'center' },
+  chip: { height: 26, borderRadius: 360, backgroundColor: colors.white, paddingHorizontal: 10, justifyContent: 'center' },
   second: { width: '100%', aspectRatio: 0.85, borderRadius: radius.md, marginTop: 16, backgroundColor: colors.grey200 },
-  whyRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.base, borderRadius: radius.full, paddingLeft: 12, marginTop: 16 },
-  whyBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  whyRow: { flexDirection: 'row', alignItems: 'center', height: 60, backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: 30, paddingLeft: 16, paddingRight: 5, marginTop: 23 },
+  whyBtn: { width: 50, height: 50, borderRadius: 25, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
 });

@@ -8,11 +8,11 @@ import { colors } from '@/theme';
 
 export default function AdminHome() {
   const { data, loading } = useServer(adminOverview, null);
-  if (loading) return <Screen><Header title="Moderation" /><ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} /></Screen>;
+  if (loading) return <Screen><Header title="Moderation" spaced /><ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} /></Screen>;
   if (!data)
     return (
       <Screen>
-        <Header title="Moderation" />
+        <Header title="Moderation" spaced />
         <T v="body" color={colors.grey700}>You don&apos;t have access to this area.</T>
       </Screen>
     );
@@ -24,7 +24,7 @@ export default function AdminHome() {
   ] as const;
   return (
     <Screen scroll>
-      <Header title="Moderation" />
+      <Header title="Moderation" spaced />
       <Row gap={10} style={{ flexWrap: 'wrap', marginBottom: 16 }}>
         {stats.map(([k, v]) => (
           <Card key={k} style={{ width: '47%', flexGrow: 1 }}>

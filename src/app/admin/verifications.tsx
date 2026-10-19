@@ -67,7 +67,7 @@ export default function AdminVerifications() {
   const { data, loading, setData } = useServer(adminVerifications, [] as AdminVerification[]);
   return (
     <Screen scroll>
-      <Header title="Verification review" />
+      <Header title="Verification review" spaced />
       {loading ? <ActivityIndicator color={colors.primary} /> : null}
       {!loading && data.length === 0 ? (
         <T v="body" color={colors.grey600} center style={{ marginTop: 40 }}>

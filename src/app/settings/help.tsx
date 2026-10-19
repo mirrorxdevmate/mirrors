@@ -19,7 +19,7 @@ export default function Help() {
   const [open, setOpen] = useState<number | null>(0);
   return (
     <Screen scroll>
-      <Header title="Help" />
+      <Header title="Help" spaced />
       {FAQ.map(([q, a], i) => (
         <Card key={q} style={{ marginBottom: 10 }}>
           <Pressable onPress={() => setOpen(open === i ? null : i)} accessibilityRole="button" accessibilityState={{ expanded: open === i }}>

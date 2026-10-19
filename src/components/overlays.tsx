@@ -1,10 +1,10 @@
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useState } from 'react';
-import { Animated, Dimensions, Easing, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, Dimensions, Easing, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, radius } from '@/theme';
+import { colors, fonts } from '@/theme';
 import { Button, T } from './ui';
 
 /** Bottom sheet built on Modal so it works identically on iOS, Android and web. */
@@ -33,14 +33,9 @@ export function Sheet({
         <View style={[s.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
           <View style={s.handle} />
           {title ? (
-            <View style={s.sheetHeader}>
-              <T v="h3" style={{ flex: 1 }}>
-                {title}
-              </T>
-              <Pressable accessibilityLabel="Close" hitSlop={10} onPress={onClose}>
-                <Feather name="x" size={20} color={colors.grey700} />
-              </Pressable>
-            </View>
+            <Text style={s.sheetTitle} accessibilityRole="header">
+              {title}
+            </Text>
           ) : null}
           {children}
         </View>
@@ -49,6 +44,7 @@ export function Sheet({
   );
 }
 
+/** Figma dialog: full-width #F8F9FA panel over a 40% black scrim, "Attention" eyebrow, stacked pill buttons. */
 export function Dialog({
   visible,
   title,
@@ -73,22 +69,16 @@ export function Dialog({
       <View style={s.center}>
         <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: colors.overlay }]} onPress={onClose} />
         <View style={s.dialog} accessibilityRole="alert">
-          {eyebrow ? (
-            <T v="overline" color={colors.primary} center style={{ marginBottom: 6 }}>
-              {eyebrow}
-            </T>
-          ) : null}
-          <T v="h3" center>
-            {title}
-          </T>
+          {eyebrow ? <Text style={s.eyebrow}>{eyebrow}</Text> : null}
+          <Text style={s.dialogTitle}>{title}</Text>
           {message ? (
-            <T v="body" color={colors.grey700} center style={{ marginTop: 8 }}>
+            <T v="bodyL" color={colors.grey700} center style={{ marginTop: 16, lineHeight: 20, paddingHorizontal: 16 }}>
               {message}
             </T>
           ) : null}
-          <View style={{ height: 20 }} />
+          <View style={{ height: 50 }} />
           <Button title={primary.label} variant={destructive ? 'danger' : 'primary'} onPress={primary.onPress} />
-          {secondary ? <Button title={secondary.label} variant="ghost" onPress={secondary.onPress} style={{ marginTop: 4 }} /> : null}
+          {secondary ? <Button title={secondary.label} variant="outline" onPress={secondary.onPress} style={{ marginTop: 14 }} /> : null}
         </View>
       </View>
     </Modal>
@@ -106,7 +96,8 @@ export function Tooltip({ text, visible, onHide, top = 110 }: { text: string; vi
   if (!visible) return null;
   return (
     <Animated.View pointerEvents="none" style={[s.tooltip, { top, opacity: o }]} accessibilityLiveRegion="polite">
-      <T v="bodyM" color={colors.white} center>
+      <Feather name="alert-circle" size={14} color={colors.primary} style={{ marginTop: 1 }} />
+      <T v="caption" color={colors.grey900} style={{ flex: 1, fontSize: 12 }}>
         {text}
       </T>
     </Animated.View>
@@ -166,10 +157,12 @@ export function Confetti({ count = 70 }: { count?: number }) {
 }
 
 const s = StyleSheet.create({
-  sheet: { backgroundColor: colors.white, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, paddingHorizontal: 16, paddingTop: 8, maxHeight: '90%' },
-  handle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: colors.grey300, marginBottom: 12 },
-  sheetHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  dialog: { width: '100%', maxWidth: 360, backgroundColor: colors.white, borderRadius: radius.lg, padding: 24 },
-  tooltip: { position: 'absolute', left: 16, right: 16, backgroundColor: colors.grey900, borderRadius: radius.md, paddingVertical: 14, paddingHorizontal: 16, zIndex: 50 },
+  sheet: { backgroundColor: colors.white, borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingHorizontal: 16, paddingTop: 16, maxHeight: '92%' },
+  handle: { alignSelf: 'center', width: 60, height: 2, borderRadius: 1, backgroundColor: colors.grey500, marginBottom: 36 },
+  sheetTitle: { fontFamily: fonts.heading, fontSize: 24, lineHeight: 28, color: colors.grey900, marginBottom: 16 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  dialog: { width: '100%', backgroundColor: colors.grey100, paddingHorizontal: 16, paddingTop: 31, paddingBottom: 36 },
+  eyebrow: { fontFamily: fonts.headingMedium, fontSize: 18, lineHeight: 24, color: colors.grey900, textAlign: 'center', marginBottom: 34 },
+  dialogTitle: { fontFamily: fonts.heading, fontSize: 24, lineHeight: 28, color: colors.grey900, textAlign: 'center' },
+  tooltip: { position: 'absolute', left: 16, right: 16, flexDirection: 'row', gap: 8, backgroundColor: colors.secondary, borderRadius: 8, paddingVertical: 12, paddingHorizontal: 12, zIndex: 50, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, elevation: 2 },
 });

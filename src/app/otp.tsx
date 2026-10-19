@@ -1,27 +1,33 @@
-import { Feather } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { Button, Header, LinkButton, Loading, Screen, T } from '@/components/ui';
-import { DEMO_AUTH } from '@/lib/supabase';
-import { ApiError, changeEmail, DEV_OTP, RESEND_SECONDS, sendOtp, verifyEmailChange, verifyOtp } from '@/services/api';
+import { Spinner } from '@/components/Spinner';
+import { Button, Header, LinkButton, Screen, T } from '@/components/ui';
+import { ApiError, changePhone, RESEND_SECONDS, sendPhoneCode, verifyPhoneCode } from '@/services/api';
 import { useApp } from '@/store/useApp';
-import { colors, fonts, radius } from '@/theme';
+import { colors, fonts } from '@/theme';
 import { nowMs } from '@/utils/date';
 
 type Status = 'idle' | 'verifying' | 'error' | 'expired';
 
+/** "+971501234567" → "+971 50 123 4567" */
+export function formatPhone(p: string) {
+  const m = p.match(/^(\+971)(\d{2})(\d{3})(\d+)$/);
+  if (m) return `${m[1]} ${m[2]} ${m[3]} ${m[4]}`;
+  const g = p.match(/^(\+\d{1,3})(\d+)$/);
+  return g ? `${g[1]} ${g[2].replace(/(\d{3})(?=\d{4})/g, '$1 ')}` : p;
+}
+
 export default function Otp() {
-  const params = useLocalSearchParams<{ sentAt: string; mode?: string; email?: string }>();
-  const savedEmail = useApp((s) => s.profile.email);
-  const email = params.email ?? savedEmail;
+  const params = useLocalSearchParams<{ sentAt: string; phone?: string; mode?: string }>();
+  const savedPhone = useApp((s) => s.profile.phone);
+  const phone = params.phone ?? savedPhone;
   const [sentAt, setSentAt] = useState(() => Number(params.sentAt) || nowMs());
   const [code, setCode] = useState('');
   const [status, setStatus] = useState<Status>('idle');
   const [left, setLeft] = useState(RESEND_SECONDS);
   const [resending, setResending] = useState(false);
-  const [errorText, setErrorText] = useState("That code doesn't look right. Try again.");
   const input = useRef<TextInput>(null);
 
   useEffect(() => {
@@ -29,29 +35,27 @@ export default function Otp() {
     return () => clearInterval(t);
   }, [sentAt]);
 
-
   const verify = async (c: string) => {
     setStatus('verifying');
     try {
       if (params.mode === 'change') {
-        await verifyEmailChange(email, c);
+        await changePhone(phone, c);
         const st = useApp.getState();
-        st.set({ profile: { ...st.profile, email } });
+        st.set({ profile: { ...st.profile, phone } });
         router.dismissTo('/settings/account');
         return;
       }
-      await verifyOtp(email, c, sentAt);
-      // Returning users (profile already on the server) resume where they left off;
-      // new accounts see the greeting and start onboarding.
+      await verifyPhoneCode(phone, c, sentAt);
+      // Returning users resume where they left off; new accounts see the greeting.
+      await useApp.getState().refreshAccount();
       const st = useApp.getState();
-      await st.refreshAccount();
-      const returning = !!useApp.getState().profile.firstName;
-      if (!returning) useApp.getState().set({ stage: 'auth' });
-      const next = returning ? '/' : '/greeting';
-      router.replace({ pathname: '/celebrate', params: { title: "You're verified!", next } });
+      st.set({ profile: { ...st.profile, phone } });
+      const returning = !!st.profile.firstName;
+      if (!returning) st.set({ stage: 'auth' });
+      if (returning) router.replace('/');
+      else router.replace({ pathname: '/celebrate', params: { title: "You're verified!", next: '/greeting' } });
     } catch (e) {
       setStatus(e instanceof ApiError && e.code === 'expired' ? 'expired' : 'error');
-      setErrorText(e instanceof ApiError && e.code !== 'invalid' ? e.message : "That code doesn't look right. Try again.");
       setCode('');
       setTimeout(() => input.current?.focus(), 50);
     }
@@ -60,13 +64,12 @@ export default function Otp() {
   const resend = async () => {
     setResending(true);
     try {
-      const r = params.mode === 'change' ? await changeEmail(email) : await sendOtp(email);
+      const r = await sendPhoneCode(phone);
       setSentAt(r.sentAt);
       setLeft(RESEND_SECONDS);
       setStatus('idle');
       setCode('');
-    } catch {
-      router.back();
+      input.current?.focus();
     } finally {
       setResending(false);
     }
@@ -75,53 +78,47 @@ export default function Otp() {
   if (status === 'verifying') {
     return (
       <Screen>
-        <Loading label="Verifying your code…" />
-      </Screen>
-    );
-  }
-
-  if (status === 'expired') {
-    return (
-      <Screen
-        footer={
-          <>
-            <Button title="Send a new code" loading={resending} onPress={resend} />
-            <Button title="Change email" variant="ghost" onPress={() => router.back()} />
-          </>
-        }>
-        <Header />
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <View style={st.icon}>
-            <Feather name="clock" size={26} color={colors.primary} />
-          </View>
-          <T v="h2" center>
-            That code has expired.
-          </T>
-          <T v="body" center color={colors.grey700} style={{ marginTop: 8 }}>
-            Codes are valid for 10 minutes.
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 24 }}>
+          <Spinner />
+          <T v="bodyL" color={colors.grey700} center>
+            Verifying your number…
           </T>
         </View>
       </Screen>
     );
   }
 
+  const expired = status === 'expired';
+  const error = status === 'error';
   const mm = String(Math.floor(left / 60)).padStart(2, '0');
   const ss = String(left % 60).padStart(2, '0');
 
   return (
-    <Screen>
-      <Header title="Enter your code" />
-      <T v="body" color={colors.grey700}>
-        We sent a 6-digit code to {email}. Check your inbox (and spam folder).
+    <Screen
+      footer={
+        <>
+          {error || expired ? <Button title={expired ? 'Send a new code' : 'Resend code'} loading={resending} onPress={resend} /> : null}
+          <LinkButton title="Change number" color={error || expired ? colors.grey900 : colors.grey700} onPress={() => router.back()} />
+        </>
+      }>
+      <Header title={expired ? 'That code has expired.' : 'Enter your code'} top={32} />
+      <T v="bodyL" color={colors.grey700} style={{ marginTop: 16, lineHeight: 20 }}>
+        {expired ? 'Codes are valid for 10 minutes.' : `We sent a 6-digit code to ${formatPhone(phone)}.`}
       </T>
       <Pressable onPress={() => input.current?.focus()} style={st.boxes} accessibilityLabel="Verification code">
         {Array.from({ length: 6 }).map((_, i) => {
-          const active = i === code.length && status !== 'error';
+          const active = !expired && !error && i === code.length;
+          const digit = code[i] ?? '';
           return (
-            <View key={i} style={[st.box, active && { borderColor: colors.primary, borderWidth: 1.5 }, status === 'error' && { borderColor: colors.red, borderWidth: 1 }]}>
-              <T v="h2" style={{ fontFamily: fonts.heading }}>
-                {code[i] ?? ''}
-              </T>
+            <View
+              key={i}
+              style={[
+                st.box,
+                active && st.boxActive,
+                error && st.boxError,
+                digit && !error ? { backgroundColor: colors.otpBox } : null,
+              ]}>
+              <Text style={[st.digit, active && { color: colors.primary }]}>{digit}</Text>
             </View>
           );
         })}
@@ -130,6 +127,7 @@ export default function Otp() {
         ref={input}
         value={code}
         autoFocus
+        editable={!expired}
         onChangeText={(t) => {
           const c = t.replace(/\D/g, '').slice(0, 6);
           setCode(c);
@@ -142,33 +140,35 @@ export default function Otp() {
         maxLength={6}
         style={st.hidden}
       />
-      {status === 'error' ? (
-        <T v="body" color={colors.red} style={{ marginTop: 12 }}>
-          {errorText}
+      {error ? (
+        <T v="bodyM" color={colors.red} style={{ marginTop: 12 }}>
+          {"That code doesn't look right. Try again."}
         </T>
-      ) : null}
-      <View style={{ marginTop: 16, alignItems: 'flex-start' }}>
-        {left > 0 && status !== 'error' ? (
-          <T v="body" color={colors.grey700}>
-            Resend code in {mm}:{ss}
+      ) : !expired ? (
+        left > 0 ? (
+          <T v="body" color={colors.grey700} style={{ marginTop: 12 }}>
+            Resend code in <Text style={{ fontFamily: fonts.bodySemi, color: colors.primary }}>{`${mm}:${ss}`}</Text>
           </T>
         ) : (
-          <LinkButton title={resending ? 'Sending…' : 'Resend code'} style={{ alignSelf: 'flex-start', paddingVertical: 0 }} onPress={resend} />
-        )}
-      </View>
-      <LinkButton title="Change email" style={{ alignSelf: 'flex-start' }} onPress={() => router.back()} />
-      {DEMO_AUTH ? (
-        <T v="caption" color={colors.grey500} style={{ marginTop: 'auto', marginBottom: 12 }} center>
-          Test mode · use code {DEV_OTP}
-        </T>
+          <Pressable accessibilityRole="button" onPress={resend} hitSlop={8} style={{ marginTop: 12, alignSelf: 'flex-start' }}>
+            <T v="bodyS" color={colors.primary}>
+              {resending ? 'Sending…' : 'Resend code'}
+            </T>
+          </Pressable>
+        )
       ) : null}
+      <T v="caption" color={colors.grey500} style={{ marginTop: 'auto', marginBottom: 4 }} center>
+        Demo mode · use code 123456
+      </T>
     </Screen>
   );
 }
 
 const st = StyleSheet.create({
-  boxes: { flexDirection: 'row', gap: 8, marginTop: 24 },
-  box: { flex: 1, aspectRatio: 0.9, maxHeight: 64, borderRadius: radius.md, backgroundColor: colors.base, alignItems: 'center', justifyContent: 'center' },
+  boxes: { flexDirection: 'row', gap: 8, marginTop: 16 },
+  box: { flex: 1, height: 50, borderRadius: 12, backgroundColor: colors.otpBox, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'transparent' },
+  boxActive: { backgroundColor: colors.white, borderColor: colors.primary, borderWidth: 2 },
+  boxError: { backgroundColor: colors.white, borderColor: colors.red },
+  digit: { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.grey900 },
   hidden: { position: 'absolute', opacity: 0, height: 1, width: 1 },
-  icon: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.secondary, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
 });

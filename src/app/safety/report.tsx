@@ -1,13 +1,13 @@
 import { Feather } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { TextInput, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { SingleSelect } from '@/components/step';
-import { Banner, Button, Card, Header, Screen, T, Title, ToggleRow } from '@/components/ui';
+import { Banner, Button, CheckBox, Header, LinkButton, Screen, T } from '@/components/ui';
 import { REPORT_REASONS } from '@/data/options';
 import { blockUser, endMatch, submitReport } from '@/services/api';
-import { colors, fonts, radius } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 export default function Report() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -24,20 +24,25 @@ export default function Report() {
       <Screen
         footer={
           <>
-            {!blocked ? <Button title="Block" variant="secondary" onPress={() => blockUser(id).then(() => setBlocked(true)).catch(() => {})} /> : null}
-            <Button title="Unmatch" variant="secondary" onPress={() => { endMatch(id).catch(() => {}); router.dismissTo('/(tabs)/chats'); }} />
-            <Button title="Return" onPress={() => router.dismissTo(blocked ? '/(tabs)/chats' : '/(tabs)')} />
+            {!blocked ? <Button title="Block" onPress={() => blockUser(id).then(() => setBlocked(true)).catch(() => {})} /> : null}
+            <Button
+              title="Unmatch"
+              variant="outline"
+              onPress={() => {
+                endMatch(id).catch(() => {});
+                router.dismissTo('/(tabs)/chats');
+              }}
+            />
+            <LinkButton title="Return" onPress={() => router.dismissTo(blocked ? '/(tabs)/chats' : '/(tabs)')} />
           </>
         }>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: colors.secondary, alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
-            <Feather name="shield" size={34} color={colors.primary} />
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 40 }}>
+          <View style={st.tick}>
+            <Feather name="check" size={18} color={colors.white} />
           </View>
-          <T v="h2" center>
-            Report submitted.
-          </T>
-          <T v="body" color={colors.grey700} center style={{ marginTop: 8 }}>
-            We&apos;ll review it. You won&apos;t be told the outcome, and they won&apos;t know you reported them.
+          <Text style={st.doneTitle}>Report submitted.</Text>
+          <T v="body" color={colors.grey700} center style={{ marginTop: 12, paddingHorizontal: 16 }}>
+            {"We'll review it. You won't be told the outcome, and they won't know you reported them."}
           </T>
         </View>
       </Screen>
@@ -66,29 +71,44 @@ export default function Report() {
             }}
           />
         }>
-        <Header onBack={() => setStep('reason')} />
-        {error ? <Banner tone="error" text={error} /> : null}
-        <Title sub="Optional. Our team reviews every report.">Anything you&apos;d like to add?</Title>
+        <Header title="Anything you'd like to add?" onBack={() => setStep('reason')} />
+        {error ? (
+          <View style={{ marginTop: 16 }}>
+            <Banner tone="error" text={error} />
+          </View>
+        ) : null}
+        <T v="body" color={colors.grey700} style={{ marginTop: 24 }}>
+          Optional. Our team reviews every report.
+        </T>
         <TextInput
           value={details}
           onChangeText={setDetails}
           placeholder="Add details…"
-          placeholderTextColor={colors.grey500}
+          placeholderTextColor={colors.grey600}
           multiline
           maxLength={1000}
-          style={{ minHeight: 140, backgroundColor: colors.base, borderRadius: radius.md, padding: 16, fontFamily: fonts.body, fontSize: 15, color: colors.grey900, textAlignVertical: 'top' }}
+          accessibilityLabel="Report details"
+          style={[st.area, Platform.OS === 'web' && ({ outlineStyle: 'none' } as object)]}
         />
-        <Card style={{ marginTop: 12, paddingVertical: 4 }}>
-          <ToggleRow label="Also block this person" value={alsoBlock} onChange={setAlsoBlock} />
-        </Card>
+        <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: alsoBlock }} onPress={() => setAlsoBlock(!alsoBlock)} style={st.check} hitSlop={8}>
+          <CheckBox on={alsoBlock} />
+          <T v="bodyL">Also block this person</T>
+        </Pressable>
       </Screen>
     );
 
   return (
     <Screen scroll footer={<Button title="Continue" disabled={!reason} onPress={() => setStep('detail')} />}>
-      <Header />
-      <Title>Why are you reporting this person?</Title>
+      <Header title="Why are you reporting this person?" />
+      <View style={{ height: 24 }} />
       <SingleSelect options={REPORT_REASONS} value={reason} onChange={setReason} />
     </Screen>
   );
 }
+
+const st = StyleSheet.create({
+  tick: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  doneTitle: { fontFamily: fonts.heading, fontSize: 24, lineHeight: 28, color: colors.grey900, textAlign: 'center' },
+  area: { marginTop: 16, height: 166, backgroundColor: colors.base, borderRadius: 16, paddingHorizontal: 16, paddingTop: 12, fontFamily: fonts.body, fontSize: 14, lineHeight: 20, color: colors.grey900, textAlignVertical: 'top' },
+  check: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 24 },
+});

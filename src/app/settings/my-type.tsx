@@ -1,41 +1,60 @@
-import { Feather } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { router } from "expo-router";
+import { useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { Sheet } from '@/components/overlays';
-import { SingleSelect } from '@/components/step';
-import { Badge, Card, CircleButton, Header, ListRow, Row, Screen, SectionLabel, T } from '@/components/ui';
-import { planAtLeast, useApp } from '@/store/useApp';
-import { colors } from '@/theme';
+import { Sheet } from "@/components/overlays";
+import { SingleSelect } from "@/components/step";
+import { ChevronLeft } from "@/components/icons";
+import { Slider } from "@/components/Slider";
+import { Badge, Header, Row, Screen } from "@/components/ui";
+import { planAtLeast, useApp } from "@/store/useApp";
+import { colors, fonts } from "@/theme";
 
 const ADVANCED: Record<string, string[]> = {
-  Culture: ['Open', 'Similar to mine', 'Specific'],
-  Nationality: ['Any', 'Same as mine', 'Specific'],
-  Ethnicity: ['Any', 'Same as mine', 'Specific'],
-  Religion: ['Any', 'Same as mine', 'Practising only'],
-  Lifestyle: ['Any', 'Active', 'Balanced', 'Easy-going'],
-  'Career / profession': ['Any', 'Ambitious', 'Stable'],
+  Culture: ["Open", "Similar to mine", "Specific"],
+  Nationality: ["Any", "Same as mine", "Specific"],
+  Ethnicity: ["Any", "Same as mine", "Specific"],
+  Religion: ["Any", "Same as mine", "Practising only"],
+  Lifestyle: ["Any", "Active", "Balanced", "Easy-going"],
+  "Career / profession": ["Any", "Ambitious", "Stable"],
   Education: ["Any", "Bachelor's or higher", "Master's or higher"],
-  'Family goals': ['Any', 'Wants children', "Doesn't want children"],
-  'Communication style': ['Any', 'Frequent', 'Independent'],
-  'Preference flexibility': ['Strict', 'Balanced', 'Open'],
-  'Preference vs deal-breaker': ['Simple', 'Detailed'],
+  "Family goals": ["Any", "Wants children", "Doesn't want children"],
+  "Communication style": ["Any", "Frequent", "Independent"],
+  "Preference flexibility": ["Strict", "Balanced", "Open"],
+  "Preference vs deal-breaker": ["Simple", "Detailed"],
 };
 
-function Stepper({ label, value, onChange, min, max, suffix = '' }: { label: string; value: number; onChange: (n: number) => void; min: number; max: number; suffix?: string }) {
+function Item({
+  label,
+  value,
+  onPress,
+  dim,
+}: {
+  label: string;
+  value?: string;
+  onPress?: () => void;
+  dim?: boolean;
+}) {
   return (
-    <Row gap={10}>
-      <T v="body" style={{ flex: 1 }}>
-        {label}
-      </T>
-      <CircleButton size={30} label={`Decrease ${label}`} icon={<Feather name="minus" size={14} />} onPress={() => onChange(Math.max(min, value - 1))} />
-      <T v="bodyS" style={{ minWidth: 44, textAlign: 'center' }}>
-        {value}
-        {suffix}
-      </T>
-      <CircleButton size={30} label={`Increase ${label}`} icon={<Feather name="plus" size={14} />} onPress={() => onChange(Math.min(max, value + 1))} />
-    </Row>
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [st.item, pressed && { opacity: 0.7 }]}
+    >
+      <Text style={[st.label, dim && { color: colors.grey500 }]}>{label}</Text>
+      <Row gap={8}>
+        {value ? (
+          <Text style={[st.value, dim && { color: colors.grey500 }]}>
+            {value}
+          </Text>
+        ) : null}
+        {!dim ? (
+          <View style={{ transform: [{ scaleX: -1 }] }}>
+            <ChevronLeft color={colors.grey900} />
+          </View>
+        ) : null}
+      </Row>
+    </Pressable>
   );
 }
 
@@ -44,58 +63,92 @@ export default function MyType() {
   const plan = useApp((s) => s.plan);
   const intent = useApp((s) => s.profile.intent);
   const updateType = useApp((s) => s.updateType);
-  const unlocked = planAtLeast(plan, 'plus');
+  const unlocked = planAtLeast(plan, "plus");
   const [open, setOpen] = useState<string | null>(null);
 
   return (
     <Screen scroll>
       <Header title="My Type" />
-      <Card style={{ gap: 14 }}>
-        <SectionLabel>Age range</SectionLabel>
-        <Stepper label="From" value={type.ageMin} min={18} max={type.ageMax} onChange={(ageMin) => updateType({ ageMin })} />
-        <Stepper label="To" value={type.ageMax} min={type.ageMin} max={80} onChange={(ageMax) => updateType({ ageMax })} />
-      </Card>
-      <Card style={{ marginTop: 12, gap: 10 }}>
-        <SectionLabel>Distance</SectionLabel>
-        <Stepper label="Within" value={type.distanceKm} min={5} max={300} suffix=" km" onChange={(distanceKm) => updateType({ distanceKm })} />
-        <Row gap={8}>
-          {[10, 25, 50, 100].map((d) => (
-            <T key={d} v="captionM" color={type.distanceKm === d ? colors.primary : colors.grey600} onPress={() => updateType({ distanceKm: d })} style={{ padding: 6 }}>
-              {d} km
-            </T>
-          ))}
-        </Row>
-      </Card>
-      <Card style={{ marginTop: 12, paddingVertical: 0 }}>
-        <ListRow label="Relationship goal" value={intent} onPress={() => router.push('/onboarding/intent?edit=1')} />
-        <ListRow label="Basic type preferences" value="Edit" onPress={() => router.push('/type/understood?edit=1')} />
-        <ListRow label="Deal-breakers" value={type.dealBreakers.join(', ') || 'None'} last onPress={() => router.push('/type/flexibility?edit=1')} />
-      </Card>
+      <View style={{ gap: 12, marginTop: 12 }}>
+        <View style={st.box}>
+          <Row style={{ justifyContent: "space-between" }}>
+            <Text style={st.label}>Age range</Text>
+            <Text style={st.label}>
+              {type.ageMin}-{type.ageMax}
+            </Text>
+          </Row>
+          <Slider
+            label="Age range"
+            min={18}
+            max={80}
+            values={[type.ageMin, type.ageMax]}
+            onChange={([ageMin, ageMax]) => updateType({ ageMin, ageMax })}
+          />
+        </View>
+        <View style={st.box}>
+          <Row style={{ justifyContent: "space-between" }}>
+            <Text style={st.label}>Distance</Text>
+            <Text style={st.label}>
+              Within {type.distanceKm}{" "}
+              <Text style={{ fontSize: 12, color: colors.grey600 }}>km</Text>
+            </Text>
+          </Row>
+          <Slider
+            label="Distance"
+            min={5}
+            max={100}
+            values={[type.distanceKm]}
+            onChange={([distanceKm]) => updateType({ distanceKm })}
+          />
+        </View>
+        <Item
+          label="Relationship goal"
+          value={intent.split(" ")[0] || "Set"}
+          onPress={() => router.push("/onboarding/intent?edit=1")}
+        />
+        <Item
+          label="Basic type preferences"
+          value="Edit"
+          onPress={() => router.push("/type/understood?edit=1")}
+        />
+        <Item
+          label="Deal-breakers"
+          value="Edit"
+          onPress={() => router.push("/type/flexibility?edit=1")}
+        />
+      </View>
 
-      <Row style={{ marginTop: 24, marginBottom: 8 }}>
-        <T v="h3" style={{ flex: 1 }}>
-          Advanced type controls
-        </T>
-        {!unlocked ? <Badge kind="plus" /> : null}
+      <Row gap={10} style={{ marginTop: 24, marginBottom: 12 }}>
+        <Text style={st.section}>ADVANCED TYPE CONTROLS</Text>
+        {!unlocked ? <Badge kind="plus" small /> : null}
       </Row>
-      <Card style={{ paddingVertical: 0, opacity: unlocked ? 1 : 0.6 }}>
-        {Object.keys(ADVANCED).map((k, i, arr) => (
-          <ListRow
+      <View style={{ gap: 6 }}>
+        {Object.keys(ADVANCED).map((k) => (
+          <Item
             key={k}
             label={k}
-            value={unlocked ? type.advanced[k] ?? ADVANCED[k][0] : '—'}
-            last={i === arr.length - 1}
-            onPress={() => (unlocked ? setOpen(k) : router.push({ pathname: '/upgrade/plans', params: { plan: 'plus' } }))}
+            dim={!unlocked}
+            value={
+              unlocked
+                ? k === "Preference flexibility" ||
+                  k === "Preference vs deal-breaker"
+                  ? (type.advanced[k] ?? ADVANCED[k][1])
+                  : "Edit"
+                : "—"
+            }
+            onPress={() =>
+              unlocked
+                ? setOpen(k)
+                : router.push({
+                    pathname: "/upgrade/plans",
+                    params: { plan: "plus" },
+                  })
+            }
           />
         ))}
-      </Card>
-      {!unlocked ? (
-        <T v="caption" color={colors.grey600} style={{ marginTop: 8 }}>
-          Advanced controls are part of Mirror+. Tap any row to see plans.
-        </T>
-      ) : null}
+      </View>
 
-      <Sheet visible={!!open} onClose={() => setOpen(null)} title={open ?? ''}>
+      <Sheet visible={!!open} onClose={() => setOpen(null)} title={open ?? ""}>
         <ScrollView style={{ maxHeight: 420 }}>
           {open ? (
             <SingleSelect
@@ -113,3 +166,41 @@ export default function MyType() {
     </Screen>
   );
 }
+
+const st = StyleSheet.create({
+  box: {
+    backgroundColor: colors.base,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 6,
+    gap: 12,
+  },
+  item: {
+    minHeight: 55,
+    backgroundColor: colors.base,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  label: {
+    fontFamily: fonts.body,
+    fontSize: 16,
+    lineHeight: 20,
+    color: colors.grey800,
+  },
+  value: {
+    fontFamily: fonts.body,
+    fontSize: 16,
+    lineHeight: 20,
+    color: colors.grey800,
+  },
+  section: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    lineHeight: 20,
+    color: colors.grey700,
+  },
+});

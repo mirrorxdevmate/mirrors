@@ -1,55 +1,59 @@
-import { Feather } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { Button, Card, Header, Row, Screen, T, Title } from '@/components/ui';
+import { Button, Header, LinkButton, Screen, T } from '@/components/ui';
 import { finishVerification } from '@/components/verifyFlow';
 import { useApp } from '@/store/useApp';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 export default function VerificationIntro() {
   const { from } = useLocalSearchParams<{ from?: string }>();
   const v = useApp((s) => s.verification);
   const items = [
-    { key: 'photo' as const, icon: 'camera' as const, title: 'Photo verification', sub: 'A quick selfie check that you match your photos. Takes a minute.' },
-    { key: 'identity' as const, icon: 'credit-card' as const, title: 'Identity verification', sub: 'A government ID check. Not shown on your profile.' },
+    { key: 'photo' as const, icon: 'face-recognition' as const, title: 'Photo verification', sub: 'A quick selfie check that you match your photos. Takes a minute.' },
+    { key: 'identity' as const, icon: 'card-account-details-outline' as const, title: 'Identity verification', sub: 'A government ID check. Not shown on your profile.' },
   ];
-  const next = v.photo === 'none' ? 'photo' : 'identity';
+  const next = v.photo === 'none' || v.photo === 'rejected' ? 'photo' : 'identity';
   return (
     <Screen
       scroll
       footer={
         <>
           <Button title="Verify now" onPress={() => router.push({ pathname: `/verify/${next}`, params: from ? { from } : {} })} />
-          {from ? <Button title="Later" variant="ghost" onPress={() => finishVerification(true)} /> : null}
+          <LinkButton title="Later" onPress={() => finishVerification(!!from)} />
         </>
       }>
-      {from ? <Header /> : <View style={{ height: 16 }} />}
-      <Title sub="Everyone on Mirror completes both checks. It helps people feel confident about who they're meeting.">Build trust from the start.</Title>
-      {items.map((i) => (
-        <Card key={i.key} style={{ marginBottom: 12 }}>
-          <Row gap={12} style={{ alignItems: 'flex-start' }}>
-            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.secondary, alignItems: 'center', justifyContent: 'center' }}>
-              <Feather name={i.icon} size={18} color={colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Row>
-                <T v="bodyS" style={{ flex: 1 }}>
-                  {i.title}
-                </T>
+      <Header title="Build trust from the start." onBack={from ? undefined : () => router.back()} />
+      <T v="bodyL" color={colors.grey700} style={{ marginTop: 24, marginBottom: 24, lineHeight: 20 }}>
+        {"Verification helps people feel more confident about who they're meeting."}
+      </T>
+      <View style={{ gap: 12 }}>
+        {items.map((i) => (
+          <View key={i.key} style={st.card}>
+            <MaterialCommunityIcons name={i.icon} size={20} color="#000" />
+            <View style={{ flex: 1, gap: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={st.title}>{i.title}</Text>
                 {v[i.key] !== 'none' ? (
-                  <T v="captionM" color={v[i.key] === 'verified' ? colors.green : colors.amber}>
-                    {v[i.key] === 'verified' ? 'Verified' : 'Pending'}
-                  </T>
+                  <Text style={[st.state, { color: v[i.key] === 'verified' ? colors.green : v[i.key] === 'rejected' ? colors.red : colors.orange }]}>
+                    {v[i.key] === 'verified' ? 'Verified' : v[i.key] === 'rejected' ? 'Try again' : 'Pending'}
+                  </Text>
                 ) : null}
-              </Row>
-              <T v="body" color={colors.grey700} style={{ marginTop: 2 }}>
+              </View>
+              <T v="body" color={colors.grey600}>
                 {i.sub}
               </T>
             </View>
-          </Row>
-        </Card>
-      ))}
+          </View>
+        ))}
+      </View>
     </Screen>
   );
 }
+
+const st = StyleSheet.create({
+  card: { minHeight: 96, backgroundColor: colors.base, borderRadius: 16, padding: 16, flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  title: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: 16, lineHeight: 20, color: colors.grey900 },
+  state: { fontFamily: fonts.bodySemi, fontSize: 12 },
+});

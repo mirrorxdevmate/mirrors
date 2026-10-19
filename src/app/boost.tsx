@@ -1,14 +1,16 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Badge, Button, Card, Header, Row, Screen, T, Title } from '@/components/ui';
+import { AppIcon } from '@/components/appIcons';
+import { RadioDot } from '@/components/icons';
+import { Badge, Button, Header, Row, Screen, T } from '@/components/ui';
 import { billingEnabled, buy, loadProducts, productId } from '@/lib/billing';
 import { activateBoost, PRICES } from '@/services/api';
 import { boostDiscount, money, useCheckout } from '@/store/checkout';
 import { useApp } from '@/store/useApp';
-import { colors, radius } from '@/theme';
+import { colors, fonts } from '@/theme';
 import { countdown, nowMs } from '@/utils/date';
 
 const PACKS = [1, 3, 5];
@@ -53,27 +55,23 @@ export default function Boost() {
   if (active)
     return (
       <Screen footer={<Button title="Back to Mirror" onPress={() => router.back()} />}>
-        <Header title="Profile Boost" />
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: colors.secondary, alignItems: 'center', justifyContent: 'center' }}>
-            <MaterialCommunityIcons name="lightning-bolt" size={48} color={colors.primary} />
-          </View>
-          <T v="h2" center style={{ marginTop: 20 }}>
-            You&apos;re in the spotlight
-          </T>
-          <T v="body" center color={colors.grey700} style={{ marginTop: 8 }}>
-            Your Boost is active. More compatible people can discover your profile right now.
-          </T>
-          <T v="h1" style={{ marginTop: 24, fontVariant: ['tabular-nums'] }}>
-            {countdown(endsAt! - now).clock}
-          </T>
-          <T v="caption" color={colors.grey600}>
+        <Header title="Profile Boost" spaced />
+        <Text style={st.h1}>You’re in the spotlight</Text>
+        <T v="bodyL" color={colors.grey700} style={{ marginTop: 16, lineHeight: 20 }}>
+          Your Boost is active. More compatible people can discover your profile right now.
+        </T>
+        <View style={st.timer}>
+          <Text style={st.clock}>{countdown(endsAt! - now).clock}</Text>
+          <T v="captionM" style={{ flex: 1 }}>
             Remaining
           </T>
-          <T v="caption" color={colors.grey600} style={{ marginTop: 16 }}>
-            Boosts remaining: {boosts}
-          </T>
+          <View style={st.bolt}>
+            <AppIcon name="boost" height={20} />
+          </View>
         </View>
+        <T v="caption" color={colors.grey700} style={{ marginTop: 12 }}>
+          Boosts remaining: {boosts}
+        </T>
       </Screen>
     );
 
@@ -96,62 +94,70 @@ export default function Boost() {
               }}
             />
           ) : null}
-          <Button
-            title="Review purchase"
-            variant={boosts > 0 ? 'secondary' : 'primary'}
-            loading={busy}
-            onPress={purchase}
-          />
-          <T v="caption" color={colors.grey600} center style={{ marginTop: 4 }}>
-            One-time purchase. Not a subscription.
-          </T>
+          <Button title="Review purchase" variant={boosts > 0 ? 'outline' : 'primary'} loading={busy} onPress={purchase} />
         </>
       }>
       <Header title="Profile Boost" />
-      <Title sub="Mirror will consider your profile more often for people you're already compatible with.">{'Be seen by the right people'}</Title>
-      <Row gap={10}>
+      <T v="body" color={colors.grey700} style={{ marginTop: 24 }}>
+        {"Mirror will consider your profile more often for people you're already compatible with."}
+      </T>
+      <View style={{ gap: 12, marginTop: 24 }}>
         {PACKS.map((n) => {
           const on = pack === n;
           return (
-            <Pressable
-              key={n}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: on }}
-              onPress={() => setPack(n)}
-              style={{ flex: 1, padding: 14, borderRadius: radius.md, backgroundColor: on ? colors.secondary : colors.base, borderWidth: on ? 1.5 : 0, borderColor: colors.primary, alignItems: 'center' }}>
-              <T v="h3">{n}</T>
-              <T v="caption" color={colors.grey700}>
-                Boost{n > 1 ? 's' : ''}
-              </T>
-              <T v="bodyS" style={{ marginTop: 8 }}>
-                {storePrices[n] ?? money(PRICES.boosts[n] * discount)}
-              </T>
-              <T v="caption" color={colors.grey600}>
-                30 min each
-              </T>
+            <Pressable key={n} accessibilityRole="radio" accessibilityState={{ checked: on }} onPress={() => setPack(n)} style={[st.pack, on && { backgroundColor: colors.secondary }]}>
+              <RadioDot on={on} />
+              <View style={{ flex: 1 }}>
+                <T v="bodyM">
+                  {n} Boost{n > 1 ? 's' : ''}
+                </T>
+                <T v="caption" color={colors.grey600} style={{ fontSize: 10, lineHeight: 14 }}>
+                  30 min each
+                </T>
+              </View>
+              <T v="bodyM">{storePrices[n] ?? money(PRICES.boosts[n] * discount)}</T>
             </Pressable>
           );
         })}
-      </Row>
+      </View>
       {plan !== 'free' ? (
         <Row style={{ marginTop: 10 }}>
-          <Badge kind={plan === 'plus' ? 'plus' : 'premium'} />
+          <Badge kind={plan === 'plus' ? 'plus' : 'premium'} small />
           <T v="caption" color={colors.grey700}>
             Member pricing applied
           </T>
         </Row>
       ) : null}
-      <Card style={{ marginTop: 16 }}>
-        <T v="bodyS">More visibility, same standards.</T>
-        <T v="body" color={colors.grey700} style={{ marginTop: 6 }}>
-          Boost never overrides your:
+      <View style={st.info}>
+        <Row gap={8}>
+          <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' }}>
+            <Feather name="check" size={10} color={colors.white} />
+          </View>
+          <T v="body">More visibility, Same standards.</T>
+        </Row>
+        <T v="caption" style={{ marginTop: 12, fontSize: 12 }}>
+          Boost never overrides your
         </T>
-        {NEVER.map((n) => (
-          <T key={n} v="body" color={colors.grey800} style={{ marginTop: 2 }}>
-            — {n}
-          </T>
-        ))}
-      </Card>
+        <View style={{ marginTop: 12, gap: 6, paddingLeft: 16 }}>
+          {NEVER.map((n) => (
+            <T key={n} v="caption" style={{ fontSize: 12 }}>
+              — {n}
+            </T>
+          ))}
+        </View>
+      </View>
+      <T v="body" style={{ marginTop: 16 }}>
+        One-time purchase. Not a subscription.
+      </T>
     </Screen>
   );
 }
+
+const st = StyleSheet.create({
+  h1: { fontFamily: fonts.heading, fontSize: 24, lineHeight: 28, color: colors.grey900 },
+  pack: { minHeight: 66, borderRadius: 16, backgroundColor: colors.base, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16 },
+  info: { marginTop: 12, backgroundColor: colors.base, borderRadius: 16, padding: 16 },
+  timer: { marginTop: 20, minHeight: 66, borderRadius: 12, backgroundColor: colors.secondary, flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: 16 },
+  clock: { fontFamily: fonts.heading, fontSize: 20, color: colors.grey900, fontVariant: ['tabular-nums'] },
+  bolt: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.white, borderWidth: 2, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+});

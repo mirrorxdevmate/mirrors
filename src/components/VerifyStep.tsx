@@ -1,18 +1,25 @@
 import { Feather } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import Svg, { Rect } from 'react-native-svg';
 
 import { submitVerification } from '@/services/api';
 import { useApp } from '@/store/useApp';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
 import { takePhoto } from '@/utils/media';
-import { Confetti } from './overlays';
-import { Banner, Button, Header, Screen, T } from './ui';
+import { Spinner } from './Spinner';
+import { Banner, Button, Header, LinkButton, Screen, StatusBanner, T } from './ui';
 import { finishVerification } from './verifyFlow';
 
 type Phase = 'intro' | 'checking' | 'pending' | 'done';
+
+/** Dashed oval face guide from the PHOTO VERIFICATION frame (274×350). */
+const FaceGuide = () => (
+  <Svg width={274} height={350}>
+    <Rect x={0.5} y={0.5} width={273} height={349} rx={136.5} fill="none" stroke={colors.grey800} strokeDasharray="4 4" />
+  </Svg>
+);
 
 export function VerifyStep({
   kind,
@@ -33,14 +40,12 @@ export function VerifyStep({
   const verification = useApp((s) => s.verification);
   const set = useApp((s) => s.set);
   const [phase, setPhase] = useState<Phase>(verification[kind] === 'verified' ? 'done' : verification[kind] === 'pending' ? 'pending' : 'intro');
-  const [uri, setUri] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   const start = async () => {
     setError('');
     const shot = kind === 'photo' ? await takePhoto({ front: true, square: true }) : await takePhoto();
     if (!shot) return;
-    setUri(shot.uri);
     setPhase('checking');
     try {
       // Uploads privately and records the check; a reviewer/vendor moves it from pending to verified.
@@ -59,40 +64,45 @@ export function VerifyStep({
     else finishVerification(!!from);
   };
 
+  // PHOTO / IDENTITY VERIFICATION (Loading) — pending review
   if (phase === 'checking' || phase === 'pending')
     return (
-      <Screen>
+      <Screen
+        footer={
+          <>
+            <StatusBanner tone="pending" text="Pending — Usually under 24 hours" style={{ marginBottom: 18 }} />
+            <Button title="Continue" loading={phase === 'checking'} onPress={next} />
+          </>
+        }>
         <Header title={title} />
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          {uri ? <Image source={uri} style={{ width: 160, height: 160, borderRadius: kind === 'photo' ? 80 : radius.md, marginBottom: 24, opacity: 0.8 }} /> : null}
-          {phase === 'checking' ? <ActivityIndicator color={colors.primary} size="large" /> : <Feather name="clock" size={36} color={colors.amber} />}
-          <T v="h3" center style={{ marginTop: 16 }}>
-            {phase === 'checking' ? checking : 'Submitted for review'}
-          </T>
-          <T v="body" center color={colors.grey700} style={{ marginTop: 6 }}>
-            Pending — usually under 24 hours. You can keep using Mirror.
+        <View style={st.center}>
+          <Spinner />
+          <T v="bodyL" color={colors.grey700} center>
+            {checking}
           </T>
         </View>
-        <Button title={phase === 'pending' ? 'Continue' : 'Continue in background'} variant={phase === 'pending' ? 'primary' : 'ghost'} onPress={next} />
       </Screen>
     );
 
+  // PHOTO / IDENTITY VERIFIED
   if (phase === 'done')
     return (
-      <Screen footer={<Button title="Continue" onPress={next} />}>
-        <Header title={title} />
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: '#EAF8E4', alignItems: 'center', justifyContent: 'center' }}>
-            <Feather name="check" size={44} color={colors.green} />
+      <Screen
+        footer={
+          <>
+            <StatusBanner tone="success" text={kind === 'photo' ? 'Photo verified' : 'Identity verified'} style={{ marginBottom: 18 }} />
+            <Button title="Continue" onPress={next} />
+          </>
+        }>
+        <Header title={kind === 'photo' ? 'Photo verified' : 'Identity verified'} />
+        <T v="bodyL" color={colors.grey700} style={{ marginTop: 24, lineHeight: 20 }}>
+          You’re verified and ready to continue.
+        </T>
+        <View style={st.center}>
+          <View style={st.tick}>
+            <Feather name="check" size={26} color={colors.white} />
           </View>
-          <T v="h2" center style={{ marginTop: 20 }}>
-            {kind === 'photo' ? 'Photo verified' : 'Identity verified'}
-          </T>
-          <T v="body" center color={colors.grey700} style={{ marginTop: 6 }}>
-            You&apos;re verified and ready to continue.
-          </T>
         </View>
-        <Confetti count={40} />
       </Screen>
     );
 
@@ -101,31 +111,49 @@ export function VerifyStep({
       footer={
         <>
           <Button title={cta} onPress={start} />
-          {from ? <Button title="Later" variant="ghost" onPress={() => finishVerification(true)} /> : null}
+          <LinkButton title="Later" onPress={() => finishVerification(!!from)} />
         </>
       }>
       <Header title={title} />
-      {error ? <Banner tone="error" text={error} /> : null}
-      <View style={{ alignItems: 'center', marginVertical: 24 }}>
-        <View style={{ width: 200, height: kind === 'photo' ? 200 : 130, borderRadius: kind === 'photo' ? 100 : radius.md, borderWidth: 2, borderStyle: 'dashed', borderColor: colors.primary, backgroundColor: colors.base, alignItems: 'center', justifyContent: 'center' }}>
-          <Feather name={kind === 'photo' ? 'user' : 'credit-card'} size={56} color={colors.grey500} />
-          {kind === 'identity' ? (
-            <T v="overline" color={colors.grey600} style={{ marginTop: 8 }}>
-              ID document capture
+      {error ? (
+        <View style={{ marginTop: 16 }}>
+          <Banner tone="error" text={error} />
+        </View>
+      ) : null}
+      {kind === 'photo' ? (
+        <View style={st.camera}>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <FaceGuide />
+          </View>
+          <View style={{ gap: 10, paddingHorizontal: 16, paddingBottom: 40 }}>
+            {steps.map((s) => (
+              <T key={s} v="body" color={colors.grey700}>
+                {s}
+              </T>
+            ))}
+          </View>
+        </View>
+      ) : (
+        <>
+          <View style={st.idBox}>
+            <T v="body" color={colors.grey700}>
+              ID DOCUMENT CAPTURE
+            </T>
+          </View>
+          {note ? (
+            <T v="body" color={colors.grey700} style={{ marginTop: 16 }}>
+              {note}
             </T>
           ) : null}
-        </View>
-      </View>
-      {steps.map((s) => (
-        <T key={s} v="bodyL" style={{ marginBottom: 10 }}>
-          {s}
-        </T>
-      ))}
-      {note ? (
-        <T v="body" color={colors.grey700} style={{ marginTop: 8 }}>
-          {note}
-        </T>
-      ) : null}
+        </>
+      )}
     </Screen>
   );
 }
+
+const st = StyleSheet.create({
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 24, paddingBottom: 40 },
+  tick: { width: 50, height: 50, borderRadius: 25, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  camera: { flex: 1, marginTop: 36, marginBottom: 8, borderRadius: 8, backgroundColor: colors.grey300, overflow: 'hidden' },
+  idBox: { marginTop: 32, height: 196, borderRadius: 8, backgroundColor: colors.grey300, alignItems: 'center', justifyContent: 'center' },
+});

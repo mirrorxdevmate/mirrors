@@ -21,25 +21,25 @@ export default function DeleteAccount() {
         <>
           <Button
             title="Pause my account"
-            variant="secondary"
+            variant="outline"
             onPress={() => {
               useApp.getState().setPaused(true);
               router.dismissAll();
               router.navigate('/(tabs)');
             }}
           />
-          <Button title="Delete" variant="danger" disabled={!reason} loading={busy} onPress={() => setConfirm(true)} />
+          <Button title="Delete" disabled={!reason} loading={busy} onPress={() => setConfirm(true)} />
         </>
       }>
-      <Header title="Delete Account" />
+      <Header title="Delete Account" spaced />
       {error ? <Banner tone="error" text={error} /> : null}
       <T v="body" color={colors.grey700}>
         We&apos;re sorry to see you go. Deleting your account will permanently remove your profile, matches, conversations, and all personal data from Mirror.
       </T>
-      <T v="h3" style={{ marginTop: 20 }}>
+      <T v="h3" style={{ marginTop: 24 }}>
         Help us understand
       </T>
-      <T v="body" color={colors.grey700} style={{ marginTop: 4, marginBottom: 14 }}>
+      <T v="body" color={colors.grey700} style={{ marginTop: 8, marginBottom: 16 }}>
         What made you decide to leave Mirror? Your feedback helps us improve the experience.
       </T>
       <SingleSelect options={LEAVE_REASONS} value={reason} onChange={setReason} />

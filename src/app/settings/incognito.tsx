@@ -1,48 +1,47 @@
-import { Feather } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { Locked } from '@/components/Locked';
-import { Badge, Card, Header, Row, Screen, T, ToggleRow } from '@/components/ui';
+import { Badge, Button, Header, Row, Screen, T, Toggle } from '@/components/ui';
 import { planAtLeast, useApp } from '@/store/useApp';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 
-const POINTS = [
-  'Only people you show interest in can see you.',
-  'You still receive your normal introductions.',
-  'Existing matches and conversations are unaffected.',
-  'Reporting, blocking and safety tools work exactly as before.',
-];
+const POINTS = ['You still receive your normal introductions.', 'Existing matches and conversations are unaffected.', 'Reporting, blocking and safety tools work exactly as before.'];
 
 export default function Incognito() {
   const plan = useApp((s) => s.plan);
   const on = useApp((s) => s.settings.incognito);
   const updateSettings = useApp((s) => s.updateSettings);
   const unlocked = planAtLeast(plan, 'premium');
+  const dim = !unlocked;
   return (
-    <Screen scroll>
-      <Header title="Incognito Mode" />
-      <Row>
-        <T v="h2" style={{ flex: 1 }}>
-          Take control of your visibility
-        </T>
-        {!unlocked ? <Badge kind="premium" /> : null}
+    <Screen scroll footer={unlocked ? undefined : <Button title="See plans" onPress={() => router.push({ pathname: '/upgrade/plans', params: { plan: 'premium' } })} />}>
+      <Header title="Incognito Mode" big={false} />
+      <Row gap={10} style={{ marginTop: 24 }}>
+        <Text style={st.h1}>Take control of your visibility</Text>
+        <Badge kind="premium" />
       </Row>
-      <Card style={{ marginTop: 16, gap: 12 }}>
+      <Row style={{ marginTop: 24, justifyContent: 'space-between' }}>
+        <Text style={[st.label, dim && { color: colors.grey600 }]}>Incognito Mode</Text>
+        <Toggle label="Incognito Mode" value={on && unlocked} disabled={!unlocked} onChange={(v) => updateSettings({ incognito: v })} />
+      </Row>
+      <T v="body" color={dim ? colors.grey400 : colors.grey700} style={{ marginTop: 8 }}>
+        Only people you show interest in can see you.
+      </T>
+      <View style={{ gap: 12, marginTop: 16 }}>
         {POINTS.map((p) => (
-          <Row key={p} gap={10} style={{ alignItems: 'flex-start' }}>
-            <Feather name="check" size={16} color={colors.primary} style={{ marginTop: 2 }} />
-            <T v="body" style={{ flex: 1 }}>
+          <View key={p} style={[st.point, dim && { backgroundColor: colors.grey100 }]}>
+            <T v="body" color={dim ? colors.grey600 : colors.grey800}>
               {p}
             </T>
-          </Row>
+          </View>
         ))}
-      </Card>
-      {unlocked ? (
-        <Card style={{ marginTop: 16, paddingVertical: 4 }}>
-          <ToggleRow label="Incognito Mode" sub={on ? 'You are hidden from people you haven’t liked.' : 'Off'} value={on} onChange={(v) => updateSettings({ incognito: v })} />
-        </Card>
-      ) : (
-        <Locked need="premium" text="Incognito Mode is part of Premium." />
-      )}
+      </View>
     </Screen>
   );
 }
+
+const st = StyleSheet.create({
+  h1: { fontFamily: fonts.heading, fontSize: 24, lineHeight: 28, color: colors.grey900, flexShrink: 1 },
+  label: { fontFamily: fonts.bodySemi, fontSize: 14, lineHeight: 20, color: colors.grey900 },
+  point: { backgroundColor: colors.base, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 12 },
+});

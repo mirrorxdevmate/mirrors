@@ -1,7 +1,9 @@
 import { useState } from 'react';
 
 import { SingleSelect, StepScreen, useStepNav } from '@/components/step';
-import { Card, ToggleRow } from '@/components/ui';
+import { View } from 'react-native';
+
+import { ToggleRow } from '@/components/ui';
 import { FAITHS } from '@/data/options';
 import { useApp } from '@/store/useApp';
 
@@ -18,10 +20,10 @@ export default function Faith() {
   return (
     <StepScreen step={5} total={9} title="What best describes your faith or belief?" canContinue={!!value} onContinue={save} onSkip={save}>
       <SingleSelect options={FAITHS} value={value} onChange={setValue} />
-      <Card style={{ marginTop: 6, paddingVertical: 4 }}>
+      <View style={{ marginTop: 0 }}>
         <ToggleRow label="Show on my profile" value={vis.show} onChange={(show) => setVis({ ...vis, show })} />
         <ToggleRow label="Use for matching" value={vis.match} onChange={(match) => setVis({ ...vis, match })} />
-      </Card>
+      </View>
     </StepScreen>
   );
 }

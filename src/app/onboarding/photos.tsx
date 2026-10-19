@@ -18,7 +18,8 @@ export default function Photos() {
       step={6}
       total={8}
       title="Add your photos"
-      sub="At least 1 photo of your face. Add up to 6. The first is your main photo."
+      canContinue={!error}
+      sub="At least 1 photo of your face. Add up to 6. Drag to reorder — the first is your main photo."
       onContinue={() => {
         if (!photos.length) return setError(true);
         updateProfile({ photos });
@@ -33,7 +34,7 @@ export default function Photos() {
         }}
       />
       {error ? (
-        <T v="body" color={colors.red} style={{ marginTop: 14 }}>
+        <T v="bodyM" color={colors.red} style={{ marginTop: 16 }}>
           You&apos;ll need at least one photo to continue.
         </T>
       ) : null}

@@ -1,24 +1,27 @@
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Fragment, useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Sheet, Tooltip } from '@/components/overlays';
-import { Fact, ProfileDetail } from '@/components/profile';
-import { Button, Card, LinkButton, Option, Row, T, VerifiedTick, tap } from '@/components/ui';
+import { AppIcon } from '@/components/appIcons';
+import { Fact, ProfileDetail, Verified } from '@/components/profile';
+import { Button, LinkButton, Row, T, tap } from '@/components/ui';
 import { NOT_FOR_ME } from '@/data/options';
 import type { Profile } from '@/data/profiles';
 import { scheduleBatchReady } from '@/lib/push';
+import { photoUrl } from '@/lib/supabase';
 import * as api from '@/services/api';
 import { BATCH, useApp } from '@/store/useApp';
-import { colors, radius } from '@/theme';
+import { colors, fonts } from '@/theme';
 import { countdown, nowMs } from '@/utils/date';
 
-type SheetKind = null | 'notForMe' | 'curious' | 'rewind' | 'streak' | 'starEarned' | 'boostDone';
+type SheetKind = null | 'notForMe' | 'curious' | 'rewind' | 'rewindReady' | 'streak' | 'starEarned' | 'boostDone';
 
 function useNow(ms = 1000) {
   const [now, setNow] = useState(nowMs);
@@ -104,7 +107,7 @@ export default function Introductions() {
   const [handledNotice, setHandledNotice] = useState<string | undefined>();
   if (params.notice !== handledNotice) {
     setHandledNotice(params.notice);
-    if (params.notice === 'rewind') setToast('Mirror+ is active. Your Rewind is ready.');
+    if (params.notice === 'rewind') setSheet('rewindReady');
     if (params.notice === 'boost') setToast('Your Boost is active.');
   }
 
@@ -208,43 +211,50 @@ export default function Introductions() {
     );
   }
 
-  /* ── paused & batch-complete states ── */
+  /* ── paused & batch-complete states (BATCH COMPLETE / PAUSED frames) ── */
   if (s.paused || !current) {
     const plan = BATCH[s.plan];
     const left = countdown((batch?.resetAt ?? now) - now);
-    const bg = lastSeen?.photos[0] ?? s.profile.photos[0];
+    const bg = lastSeen?.photos[0] ?? photoUrl(s.profile.photos[0] ?? '');
+    const seen = batch?.seen ?? 0;
     return (
-      <View style={{ flex: 1, backgroundColor: colors.grey900 }}>
-        <StatusBar style="light" />
-        {bg ? <Image source={bg} style={StyleSheet.absoluteFill} contentFit="cover" blurRadius={30} /> : null}
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.25)' }]} />
-        <View style={{ flex: 1, justifyContent: 'center', padding: 16 }}>
+      <View style={{ flex: 1, backgroundColor: '#C9B98A' }}>
+        <StatusBar style="dark" />
+        {bg ? <Image source={bg} style={StyleSheet.absoluteFill} contentFit="cover" blurRadius={40} /> : null}
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.4)' }]} />
+        <View style={[st.top, { paddingTop: insets.top + 24 }]}>
+          <TopCircle label="Type controls" onPress={() => router.push('/settings/my-type')}>
+            <AppIcon name="filters" height={18} />
+          </TopCircle>
+          <View style={{ flex: 1 }} />
+          <TopCircle label="Profile boost" onPress={() => router.push('/boost')}>
+            <AppIcon name="boost" height={25} />
+          </TopCircle>
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 16 }}>
           <View style={st.stateCard}>
             {s.paused ? (
               <>
-                <T v="h2">Your account is paused</T>
-                <T v="body" color={colors.grey700} style={{ marginTop: 8 }}>
-                  Your profile is hidden, and you won&apos;t appear in new introductions while your account is paused.
+                <Text style={st.stateTitle}>Your account is paused</Text>
+                <T v="body" color={colors.grey700} style={{ marginTop: 16 }}>
+                  {"Your profile is hidden, and you won't appear in new introductions while your account is paused."}
                 </T>
-                <Button title="Resume Matching" style={{ marginTop: 20 }} onPress={() => s.setPaused(false)} />
+                <Button title="Resume Matching" style={st.stateBtn} onPress={() => s.setPaused(false)} />
               </>
             ) : (
               <>
-                <T v="h2">{s.plan === 'free' ? "You've seen today's introductions." : "You've seen this set."}</T>
-                <T v="body" color={colors.grey700} style={{ marginTop: 8 }}>
+                <Text style={st.stateTitle}>{s.plan === 'free' ? "You've seen today's introductions." : "You've seen this set."}</Text>
+                <T v="body" color={colors.grey700} style={{ marginTop: 16 }}>
                   {s.plan === 'free' ? 'Your next set will be ready in ' : 'Your next introductions arrive in '}
-                  <T v="bodyS">{left.text}</T>.
+                  {left.text}.
                 </T>
-                <Card style={{ marginTop: 16, backgroundColor: colors.white }}>
-                  <T v="overline" color={colors.primary}>
-                    {s.plan === 'free' ? 'Today' : 'This set'}
-                  </T>
-                  <T v="bodyM" style={{ marginTop: 4 }}>
-                    {batch?.seen ?? 0} seen · {s.plan === 'free' ? `${batch?.interested ?? 0} people you showed interest in this session` : `refreshes about every ${plan.hours} hours`}
-                  </T>
-                </Card>
-                <Button title="View matches" style={{ marginTop: 16 }} onPress={() => router.navigate('/(tabs)/chats')} />
-                {s.plan === 'free' ? <LinkButton title="Get introductions faster" onPress={() => router.push('/upgrade')} /> : null}
+                <Text style={st.stateLabel}>{s.plan === 'free' ? 'TODAY' : 'THIS SET'}</Text>
+                <T v="bodyL" style={{ marginTop: 8 }}>
+                  {seen} of {Math.max(seen, plan.size)} seen ·{' '}
+                  {s.plan === 'free' ? `${batch?.interested ?? 0} people you showed interest in` : `refreshes about every ${plan.hours} hours`}
+                </T>
+                {s.plan !== 'premium' ? <Button title="View matches" style={st.stateBtn} onPress={() => router.navigate('/(tabs)/chats')} /> : null}
+                {s.plan === 'free' ? <LinkButton title="Get introductions faster" style={{ marginTop: 12 }} onPress={() => router.push('/upgrade')} /> : null}
               </>
             )}
           </View>
@@ -258,7 +268,15 @@ export default function Introductions() {
     <View style={{ flex: 1, backgroundColor: colors.grey900 }}>
       <StatusBar style="light" />
       <Image source={current.photos[photo]} recyclingKey={`${current.id}-${photo}`} style={StyleSheet.absoluteFill} contentFit="cover" transition={250} accessibilityLabel={`${current.name}, photo ${photo + 1}`} />
-      <LinearGradient colors={['rgba(0,0,0,0.35)', 'transparent', 'transparent', 'rgba(0,0,0,0.75)']} locations={[0, 0.2, 0.5, 1]} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={['rgba(0,0,0,0.25)', 'transparent', 'transparent', 'rgba(0,0,0,0.6)']} locations={[0, 0.18, 0.55, 1]} style={StyleSheet.absoluteFill} />
+
+      {/* expanded: the photo blurs behind the card (Figma: white 12% + 60px blur) */}
+      {expanded ? (
+        <>
+          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.12)' }]} />
+        </>
+      ) : null}
 
       {/* photo navigation zones */}
       {!expanded ? (
@@ -270,82 +288,89 @@ export default function Introductions() {
       ) : null}
 
       {/* top bar */}
-      <View style={[st.top, { paddingTop: insets.top + 8 }]}>
+      <View style={[st.top, { paddingTop: insets.top + 5 }]}>
         <TopCircle label="Type controls" onPress={() => router.push('/settings/my-type')}>
-          <Feather name="sliders" size={18} color={colors.grey900} />
+          <AppIcon name="filters" height={18} />
         </TopCircle>
         <View style={{ flex: 1, alignItems: 'center' }}>
-          <T v="caption" color={colors.white}>
+          <Text style={st.left}>
             {deck.length} introduction{deck.length === 1 ? '' : 's'} left.
-          </T>
-          <Row gap={4} style={{ marginTop: 6 }}>
-            {current.photos.map((_, i) => (
-              <View key={i} style={{ width: 14, height: 3, borderRadius: 2, backgroundColor: i === photo ? colors.white : 'rgba(255,255,255,0.4)' }} />
-            ))}
-          </Row>
+          </Text>
+          {!expanded ? (
+            <Row gap={5} style={{ marginTop: 14 }}>
+              {current.photos.map((_, i) => (
+                <View key={i} style={{ width: 11, height: 2, borderRadius: 1, backgroundColor: colors.white, opacity: i === photo ? 1 : 0.5 }} />
+              ))}
+            </Row>
+          ) : null}
         </View>
         {boostLeft > 0 ? (
-          <Pressable accessibilityLabel="Boost active" onPress={() => router.push('/boost')} style={st.boostPill}>
-            <MaterialCommunityIcons name="lightning-bolt" size={16} color={colors.white} />
-            <T v="captionM" color={colors.white}>
-              {countdown(boostLeft).clock.slice(3)}
-            </T>
+          <Pressable accessibilityLabel="Boost active" onPress={() => router.push('/boost')} style={st.boostOn}>
+            <AppIcon name="boost" height={16} />
+            <Text style={st.boostTime}>{countdown(boostLeft).clock.slice(3)}</Text>
           </Pressable>
         ) : (
           <TopCircle label="Profile boost" onPress={() => router.push('/boost')}>
-            <MaterialCommunityIcons name="lightning-bolt" size={20} color={colors.primary} />
+            <AppIcon name="boost" height={25} />
           </TopCircle>
         )}
       </View>
 
       {/* detail card or summary */}
       {expanded ? (
-        <View style={[st.detailWrap, { top: insets.top + 64 }]}>
-          <ScrollView style={st.detail} contentContainerStyle={{ padding: 16, paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
-            <Pressable onPress={() => setExpanded(false)} accessibilityLabel="Collapse profile" style={{ alignSelf: 'center', marginBottom: 6 }}>
-              <Feather name="chevron-down" size={22} color={colors.grey500} />
-            </Pressable>
-            <ProfileDetail p={current} onWhy={() => router.push(`/why/${current.id}`)} />
-          </ScrollView>
+        <View style={[st.detailWrap, { top: insets.top + 79 }]}>
+          <View style={st.detail}>
+            <BlurView intensity={40} tint="light" style={StyleSheet.absoluteFill} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.8)' }]} />
+            <ScrollView contentContainerStyle={{ padding: 16, paddingTop: 20, paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
+              <ProfileDetail p={current} onWhy={() => router.push(`/why/${current.id}`)} />
+              <Pressable onPress={() => setExpanded(false)} accessibilityRole="button" accessibilityLabel="Collapse profile" style={{ alignSelf: 'center', marginTop: 12 }}>
+                <T v="caption" color={colors.grey600}>
+                  Show less
+                </T>
+              </Pressable>
+            </ScrollView>
+          </View>
         </View>
       ) : (
         <Pressable style={st.summary} onPress={() => setExpanded(true)} accessibilityRole="button" accessibilityHint="Shows the full profile">
-          <Row gap={6}>
-            <T v="h2" color={colors.white}>
+          <Row gap={12}>
+            <Text style={st.name}>
               {current.name}, {current.age}
-            </T>
-            {current.verified ? <VerifiedTick size={18} /> : null}
+            </Text>
+            {current.verified ? <Verified /> : null}
           </Row>
-          <Row gap={6} style={{ marginTop: 4 }}>
-            <Feather name="map-pin" size={12} color={colors.white} />
-            <T v="caption" color={colors.white}>
-              {current.city}{current.distanceKm != null ? `, ${current.distanceKm} km` : ''}
-            </T>
+          <Row gap={8} style={{ marginTop: 8 }}>
+            <AppIcon name="pin" height={14} color={colors.white} />
+            <Text style={st.loc}>
+              {current.city}
+              {current.distanceKm != null ? `, ${current.distanceKm} km` : ''}
+            </Text>
           </Row>
-          <Row gap={14} style={{ marginTop: 10, flexWrap: 'wrap' }}>
-            <Fact icon="human-male-height" label={`${current.heightCm}cm`} color={colors.white} compact />
-            <Fact icon="briefcase-outline" label={current.profession} color={colors.white} compact />
-            <Fact icon="target" label={current.intent} color={colors.white} compact />
+          <Row gap={24} style={{ marginTop: 8, flexWrap: 'wrap', rowGap: 6 }}>
+            <Fact compact icon={<AppIcon name="height" height={15} color={colors.white} />} label={`${current.heightCm}cm`} color={colors.white} />
+            {current.profession ? <Fact compact icon={<AppIcon name="job" height={12} color={colors.white} />} label={current.profession} color={colors.white} /> : null}
+            <Fact compact icon={<AppIcon name="intent" height={15} color={colors.white} />} label={current.intent} color={colors.white} />
           </Row>
         </Pressable>
       )}
 
       {/* actions */}
       <View style={st.actions}>
-        <ActionBtn size={48} label="Rewind" onPress={rewind}>
-          <MaterialCommunityIcons name="restore" size={22} color={colors.grey800} />
+        <ActionBtn size={50} label="Rewind" onPress={rewind}>
+          <AppIcon name="rewind" height={21} />
         </ActionBtn>
-        <ActionBtn size={64} label="Not for me" onPress={() => setSheet('notForMe')}>
-          <MaterialCommunityIcons name="close" size={30} color={colors.primary} />
+        <ActionBtn size={70} label="Not for me" onPress={() => setSheet('notForMe')}>
+          <AppIcon name="notForMe" height={39} />
         </ActionBtn>
-        <ActionBtn size={48} label="Why did Mirror recommend them?" onPress={() => setSheet('curious')}>
-          <MaterialCommunityIcons name="help-circle-outline" size={24} color={colors.grey800} />
+        <ActionBtn size={50} label="Why did Mirror recommend them?" onPress={() => setSheet('curious')}>
+          <AppIcon name="curious" height={22} />
         </ActionBtn>
-        <ActionBtn size={64} label="Interested" bg={colors.primary} onPress={() => interested()}>
-          <MaterialCommunityIcons name="heart" size={28} color={colors.white} />
+        <ActionBtn size={70} label="Interested" bg={colors.primary} onPress={() => interested()}>
+          <AppIcon name="interested" height={39} />
         </ActionBtn>
-        <ActionBtn size={48} label={`Strong interest, ${s.stars} stars`} onPress={star}>
-          <MaterialCommunityIcons name="star-four-points-outline" size={22} color="#7C5CFF" />
+        <ActionBtn size={50} label={`Strong interest, ${s.stars} stars`} onPress={star}>
+          <AppIcon name="sparkle" height={23} />
           {s.stars > 0 ? (
             <View style={st.starBadge}>
               <T v="caption" color={colors.white} style={{ fontSize: 10 }}>
@@ -359,112 +384,119 @@ export default function Introductions() {
       <Tooltip visible={!!toast} text={toast} onHide={() => setToast('')} top={insets.top + 70} />
 
       {/* ── sheets ── */}
-      <Sheet visible={sheet === 'notForMe'} onClose={() => setSheet(null)}>
-        <T v="h3">Help us understand why.</T>
-        <T v="body" color={colors.grey700} style={{ marginTop: 4, marginBottom: 14 }}>
-          Optional. It only affects who you&apos;re shown next.
+      <Sheet visible={sheet === 'notForMe'} onClose={() => setSheet(null)} title="Help us understand why.">
+        <T v="bodyL" color={colors.grey700} style={{ marginBottom: 16, lineHeight: 20 }}>
+          {"Optional. It only affects who you're shown next."}
         </T>
-        <ScrollView style={{ maxHeight: 360 }}>
+        <ScrollView style={{ maxHeight: 460 }}>
           {NOT_FOR_ME.map((r) => (
-            <Option key={r} label={r} selected={reason === r} onPress={() => setReason(r)} />
+            <Pressable
+              key={r}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: reason === r }}
+              onPress={() => setReason(r)}
+              style={[st.pill, reason === r && { backgroundColor: colors.secondary }]}>
+              <T v={reason === r ? 'bodyM' : 'body'}>{r}</T>
+            </Pressable>
           ))}
         </ScrollView>
         <Button title="Continue" style={{ marginTop: 8 }} onPress={() => confirmPass(reason || undefined)} />
-        <Button title="Skip" variant="ghost" onPress={() => confirmPass()} />
+        <LinkButton title="Skip" style={{ marginTop: 12, marginBottom: 4 }} onPress={() => confirmPass()} />
       </Sheet>
 
-      <Sheet visible={sheet === 'curious'} onClose={() => setSheet(null)}>
-        <T v="h3">Why did Mirror recommend them?</T>
-        <T v="body" color={colors.grey700} style={{ marginTop: 8 }}>
+      <Sheet visible={sheet === 'curious'} onClose={() => setSheet(null)} title="Why did Mirror recommend them?">
+        <T v="bodyL" color={colors.grey700} style={{ lineHeight: 20 }}>
           {current.outsideRange
-            ? "They sit slightly outside the type you described — but they match on the things you ranked highest."
+            ? 'They sit slightly outside the type you described — older than your stated range — but they match on the things you ranked highest.'
             : `They fit the type you described and share what you ranked highest${s.type.mattersMost.length ? `: ${s.type.mattersMost.join(', ').toLowerCase()}` : ''}.`}
         </T>
-        <Card style={{ marginTop: 14, gap: 8 }}>
-          {current.outsideRange ? (
-            <>
-              <T v="body">{current.outsideRange.reason}</T>
-              <T v="body">{current.outsideRange.strongOn}</T>
-            </>
-          ) : (
-            current.why.slice(0, 3).map((w) => (
-              <T key={w.label} v="body">
-                <T v="bodyS">{w.label}: </T>
-                {w.text}
-              </T>
-            ))
-          )}
-        </Card>
+        <View style={{ gap: 16, marginTop: 24, marginBottom: 70 }}>
+          {(current.outsideRange ? [current.outsideRange.reason, current.outsideRange.strongOn] : current.why.slice(0, 2).map((w) => `${w.label}: ${w.text}`)).map((t) => (
+            <View key={t} style={[st.pill, { marginBottom: 0 }]}>
+              <T v="bodyM">{t}</T>
+            </View>
+          ))}
+        </View>
         <Button
           title="Explore profile"
-          style={{ marginTop: 16 }}
           onPress={() => {
             setSheet(null);
             setExpanded(true);
           }}
         />
-        <Button title="Not for me" variant="ghost" onPress={() => setSheet('notForMe')} />
+        <Button title="Not for me" variant="outline" style={{ marginTop: 14 }} onPress={() => setSheet('notForMe')} />
       </Sheet>
 
-      <Sheet visible={sheet === 'rewind'} onClose={() => setSheet(null)}>
-        <T v="h3">Bring back that introduction</T>
-        <T v="body" color={colors.grey700} style={{ marginTop: 8 }}>
+      <Sheet visible={sheet === 'rewind'} onClose={() => setSheet(null)} title="Bring back that introduction">
+        <T v="bodyL" color={colors.grey700} style={{ lineHeight: 20 }}>
           Rewind lets you undo your last pass. Available on Mirror+ and Premium.
         </T>
-        <Card style={{ marginTop: 12 }}>
-          <T v="body">The profile you passed is saved while you upgrade.</T>
-        </Card>
+        <View style={st.note}>
+          <T v="caption" color={colors.grey900} style={{ fontSize: 12 }}>
+            The profile you passed is saved while you upgrade.
+          </T>
+        </View>
         <Button
           title="Upgrade"
-          style={{ marginTop: 16 }}
           onPress={() => {
             setSheet(null);
             router.push({ pathname: '/upgrade/plans', params: { then: 'rewind' } });
           }}
         />
-        <Button title="Back to profile" variant="ghost" onPress={() => setSheet(null)} />
+        <LinkButton title="Back to profile" style={{ marginTop: 12, marginBottom: 4 }} onPress={() => setSheet(null)} />
       </Sheet>
 
-      <Sheet visible={sheet === 'streak' || sheet === 'starEarned'} onClose={() => setSheet(null)}>
-        <View style={{ alignItems: 'center' }}>
-          <View style={st.starIcon}>
-            <MaterialCommunityIcons name="star-four-points" size={30} color="#7C5CFF" />
-          </View>
-          <T v="h3" center>
-            {sheet === 'starEarned' ? "You've earned a Star" : 'Keep showing up'}
-          </T>
-          <T v="body" center color={colors.grey700} style={{ marginTop: 8 }}>
-            {sheet === 'starEarned'
-              ? 'Seven days of showing up paid off. Use it when someone really stands out.'
-              : 'Stay active for seven consecutive days to earn a Strong Interest. Use it when someone really stands out.'}
-          </T>
-          <Row gap={6} style={{ marginTop: 16 }}>
-            {Array.from({ length: 7 }).map((_, i) => (
-              <View key={i} style={{ width: 28, height: 6, borderRadius: 3, backgroundColor: i < s.streakDays % 7 || sheet === 'starEarned' ? colors.primary : colors.grey200 }} />
-            ))}
-          </Row>
-          <T v="caption" color={colors.grey600} style={{ marginTop: 12 }}>
-            Free reward. No purchase required.
-          </T>
-        </View>
-        <Button title="Got it" style={{ marginTop: 16 }} onPress={() => setSheet(null)} />
-      </Sheet>
-
-      <Sheet visible={sheet === 'boostDone'} onClose={() => setSheet(null)}>
-        <T v="h3">Your Boost is complete</T>
-        <T v="body" color={colors.grey700} style={{ marginTop: 8 }}>
-          You got 18% more visibility while your Boost was active.
+      <Sheet visible={sheet === 'rewindReady'} onClose={() => setSheet(null)} title="Mirror+ is active">
+        <T v="bodyL" color={colors.grey700}>
+          Mirror+ is active. Your Rewind is ready.
         </T>
-        <Button
-          title="Boost again"
-          style={{ marginTop: 16 }}
-          onPress={() => {
-            setSheet(null);
-            router.push('/boost');
-          }}
-        />
-        <Button title="Close" variant="ghost" onPress={() => setSheet(null)} />
+        <Pressable accessibilityRole="button" accessibilityLabel="Rewind now" onPress={() => { setSheet(null); rewind(); }} style={st.bigTick}>
+          <Feather name="check" size={30} color={colors.white} />
+        </Pressable>
       </Sheet>
+
+      <Sheet visible={sheet === 'streak' || sheet === 'starEarned'} onClose={() => setSheet(null)} title={sheet === 'starEarned' ? "You've earned a Star" : 'Keep showing up'}>
+        <T v="bodyL" color={colors.grey700} style={{ lineHeight: 20 }}>
+          {sheet === 'starEarned'
+            ? 'Seven days of showing up paid off. Use it when someone really stands out.'
+            : 'Stay active for seven consecutive days to earn a Strong Interest. Use it when someone really stands out.'}
+        </T>
+        <View style={st.streak} accessibilityLabel={`${sheet === 'starEarned' ? 7 : s.streakDays % 7} of 7 days`}>
+          {Array.from({ length: 7 }).map((_, i) => {
+            const done = sheet === 'starEarned' || i < s.streakDays % 7;
+            return (
+              <Fragment key={i}>
+                {i > 0 ? <View style={[st.streakLine, done && { backgroundColor: colors.grey500 }]} /> : null}
+                <View style={[st.streakDot, { backgroundColor: done ? colors.primary : colors.grey400 }]}>
+                  <Feather name="check" size={7} color={colors.white} />
+                </View>
+              </Fragment>
+            );
+          })}
+        </View>
+        <T v="captionM" center style={{ fontSize: 12, marginBottom: 24 }}>
+          Free reward. No purchase required.
+        </T>
+      </Sheet>
+
+      <Modal visible={sheet === 'boostDone'} transparent animationType="fade" onRequestClose={() => setSheet(null)} statusBarTranslucent>
+        <Pressable style={st.dim} onPress={() => setSheet(null)}>
+          <View style={st.stateCard}>
+            <Text style={st.stateTitle}>Your Boost is complete</Text>
+            <T v="body" color={colors.grey700} style={{ marginTop: 16 }}>
+              You got 18% more visibility while your Boost was active.
+            </T>
+            <Button
+              title="Boost again"
+              style={st.stateBtn}
+              onPress={() => {
+                setSheet(null);
+                router.push('/boost');
+              }}
+            />
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -504,15 +536,29 @@ function ActionBtn({ children, size, onPress, bg = colors.white, label }: { chil
 }
 
 const st = StyleSheet.create({
-  top: { position: 'absolute', left: 0, right: 0, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 },
-  topCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
-  boostPill: { height: 44, paddingHorizontal: 12, borderRadius: 22, backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  summary: { position: 'absolute', left: 16, right: 16, bottom: 104 },
-  actions: { position: 'absolute', left: 0, right: 0, bottom: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16 },
-  shadow: { shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
-  detailWrap: { position: 'absolute', left: 12, right: 12, bottom: 96 },
-  detail: { flex: 1, backgroundColor: colors.white, borderRadius: radius.lg },
-  stateCard: { backgroundColor: 'rgba(255,255,255,0.96)', borderRadius: radius.lg, padding: 20 },
+  top: { position: 'absolute', left: 0, right: 0, flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 16 },
+  topCircle: { width: 50, height: 50, borderRadius: 25, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
+  left: { marginTop: 15, fontFamily: fonts.bodyMedium, fontSize: 14, lineHeight: 20, color: colors.white, textShadowColor: 'rgba(0,0,0,0.25)', textShadowOffset: { width: 0, height: 4 }, textShadowRadius: 6 },
+  boostOn: { width: 50, height: 50, borderRadius: 25, backgroundColor: colors.white, borderWidth: 2, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  boostTime: { fontFamily: fonts.bodyMedium, fontSize: 8, color: colors.grey900, marginTop: 1 },
+  name: { fontFamily: fonts.heading, fontSize: 24, lineHeight: 28, color: colors.white },
+  loc: { fontFamily: fonts.bodyMedium, fontSize: 14, lineHeight: 20, color: colors.white },
+  summary: { position: 'absolute', left: 17, right: 16, bottom: 116 },
+  actions: { position: 'absolute', left: 0, right: 0, bottom: 27, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 19 },
+  shadow: { shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  detailWrap: { position: 'absolute', left: 16, right: 16, bottom: 110 },
+  detail: { flex: 1, borderRadius: 32, overflow: 'hidden' },
+  note: { backgroundColor: colors.secondary, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 14, marginTop: 34, marginBottom: 34 },
+  bigTick: { alignSelf: 'center', width: 60, height: 60, borderRadius: 30, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginTop: 70, marginBottom: 60 },
+  pill: { minHeight: 60, borderRadius: 360, backgroundColor: colors.base, paddingHorizontal: 16, justifyContent: 'center', marginBottom: 16 },
+  stateCard: { backgroundColor: colors.base, borderRadius: 24, paddingHorizontal: 16, paddingTop: 24, paddingBottom: 24 },
+  stateTitle: { fontFamily: fonts.heading, fontSize: 24, lineHeight: 28, color: colors.grey900 },
+  stateLabel: { fontFamily: fonts.bodySemi, fontSize: 12, lineHeight: 20, color: colors.primary, marginTop: 16 },
+  stateBtn: { alignSelf: 'center', width: 166, marginTop: 16 },
+  dim: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', paddingHorizontal: 16 },
+  streak: { flexDirection: 'row', alignItems: 'center', marginTop: 32, marginBottom: 40 },
+  streakDot: { width: 12, height: 12, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
+  streakLine: { flex: 1, height: 1, backgroundColor: colors.grey300, marginHorizontal: 6 },
   starBadge: { position: 'absolute', top: -2, right: -2, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: '#7C5CFF', alignItems: 'center', justifyContent: 'center' },
   starIcon: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#EFEBFF', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
 });

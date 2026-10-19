@@ -10,7 +10,7 @@ export default function Blocked() {
   const { data: blocked, loading, setData } = useServer(getBlocked, []);
   return (
     <Screen scroll>
-      <Header title="Blocked users" />
+      <Header title="Blocked users" spaced />
       {loading ? (
         <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
       ) : blocked.length === 0 ? (

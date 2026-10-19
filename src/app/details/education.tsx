@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { SingleSelect, StepScreen, useStepNav } from '@/components/step';
+import { OptionalTag, SingleSelect, StepScreen, useStepNav } from '@/components/step';
 import { EDUCATION } from '@/data/options';
 import { useApp } from '@/store/useApp';
 
@@ -14,7 +14,8 @@ export default function Education() {
     advance();
   };
   return (
-    <StepScreen step={7} total={9} title="What's your education level? (Optional)" canContinue={!!value} onContinue={save} onSkip={save}>
+    <StepScreen step={7} total={9} title="What's your education level?"
+      titleExtra={<OptionalTag />} canContinue={!!value} onContinue={save} onSkip={save}>
       <SingleSelect options={EDUCATION} value={value} onChange={setValue} />
     </StepScreen>
   );

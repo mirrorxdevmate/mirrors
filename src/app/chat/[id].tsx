@@ -1,15 +1,16 @@
 import { Feather } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Dialog, Sheet, Tooltip } from '@/components/overlays';
-import { Avatar } from '@/components/profile';
-import { BackButton, Button, Chip, ListRow, Row, Screen, T, VerifiedTick } from '@/components/ui';
+import { ChevronLeft } from '@/components/icons';
+import { Avatar, Verified } from '@/components/profile';
+import { BackButton, CircleButton, Row, Screen, T } from '@/components/ui';
 import { usePerson } from '@/hooks/usePerson';
 import * as api from '@/services/api';
 import { useApp } from '@/store/useApp';
-import { colors, fonts, radius } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 const PROMPTS = ['What does being close to family look like to you?', "What's something you're proud of this year?", 'What does a perfect weekend look like?'];
 const acknowledged = new Set<string>();
@@ -100,41 +101,60 @@ export default function Chat() {
 
   const close = () => setMenu(null);
 
+  const SAFETY = [
+    { key: 'feedback', icon: 'message-square', label: 'Feedback' },
+    { key: 'trust', icon: 'shield', label: 'Trust Signals' },
+    { key: 'remove', icon: 'x-circle', label: 'Remove Connection' },
+    { key: 'report', icon: 'flag', label: 'Report' },
+    { key: 'block', icon: 'slash', label: 'Block' },
+  ] as const;
+  const pick = (k: (typeof SAFETY)[number]['key']) => {
+    if (k === 'trust') {
+      close();
+      router.push({ pathname: '/safety/trust', params: { id } });
+    } else if (k === 'report') {
+      close();
+      router.push({ pathname: '/safety/report', params: { id } });
+    } else setMenu(k);
+  };
+
   return (
     <Screen pad={false} edges={['top', 'bottom']}>
-      <Row gap={10} style={st.header}>
+      <View style={st.header}>
         <BackButton />
-        <Pressable onPress={() => router.push(`/profile-view/${p.id}`)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }} accessibilityRole="button" accessibilityLabel={`View ${p.name}'s profile`}>
-          <Avatar uri={p.photos[0]} size={36} />
-          <T v="h3">{p.name}</T>
-          {p.verified ? <VerifiedTick /> : null}
+        <Pressable onPress={() => router.push(`/profile-view/${p.id}`)} style={st.who} accessibilityRole="button" accessibilityLabel={`View ${p.name}'s profile`}>
+          <Avatar uri={p.photos[0]} size={83} />
+          <Row gap={8} style={{ marginTop: 8 }}>
+            <Text style={st.name}>{p.name}</Text>
+            {p.verified ? <Verified size={14} /> : null}
+          </Row>
         </Pressable>
-        <Pressable accessibilityLabel="Connection and safety" hitSlop={10} onPress={() => setMenu('safety')}>
-          <Feather name="more-vertical" size={22} color={colors.grey900} />
-        </Pressable>
-      </Row>
+        <CircleButton label="Connection and safety" icon={<Feather name="more-horizontal" size={18} color={colors.grey900} />} onPress={() => setMenu('safety')} />
+      </View>
 
       <FlatList
         ref={list}
         data={messages}
         keyExtractor={(m) => m.id}
-        contentContainerStyle={{ padding: 16, gap: 8, flexGrow: 1 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 25, paddingBottom: 16, gap: 16, flexGrow: 1 }}
         onContentSizeChange={() => list.current?.scrollToEnd({ animated: true })}
         ListEmptyComponent={
-          loading ? null : <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-            <T v="body" color={colors.grey600} center style={{ marginBottom: 12 }}>
-              Start with something real. Try one of these:
-            </T>
-            <View style={{ gap: 8, alignItems: 'center' }}>
-              {PROMPTS.map((q) => (
-                <Chip key={q} label={q} onPress={() => setText(q)} />
-              ))}
+          loading ? null : (
+            <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+              <T v="body" color={colors.grey600} center style={{ marginBottom: 12 }}>
+                Start with something real. Try one of these:
+              </T>
+              <View style={{ gap: 8, alignItems: 'center' }}>
+                {PROMPTS.map((q) => (
+                  <Pressable key={q} onPress={() => setText(q)} accessibilityRole="button" style={st.prompt}>
+                    <T v="body">{q}</T>
+                  </Pressable>
+                ))}
+              </View>
             </View>
-          </View>
+          )
         }
-        ListFooterComponent={
-          loading ? <ActivityIndicator color={colors.primary} style={{ marginTop: 12 }} /> : null
-        }
+        ListFooterComponent={loading ? <ActivityIndicator color={colors.primary} style={{ marginTop: 12 }} /> : sending ? <View style={st.typing} /> : null}
         renderItem={({ item }) => (
           <View style={[st.bubble, item.sender_id === me ? st.mine : st.theirs]}>
             <T v="body" color={item.sender_id === me ? colors.white : colors.grey900}>
@@ -149,54 +169,70 @@ export default function Chat() {
           This conversation has ended.
         </T>
       ) : (
-        <Row style={st.composer}>
-          <TextInput
-            value={text}
-            onChangeText={setText}
-            placeholder="Message"
-            placeholderTextColor={colors.grey500}
-            style={st.input}
-            multiline
-            maxLength={1000}
-            accessibilityLabel="Message"
-          />
-          <Pressable accessibilityRole="button" accessibilityLabel="Send" disabled={!text.trim() || sending || !matchId} onPress={() => send(text)} style={[st.send, (!text.trim() || !matchId) && { opacity: 0.4 }]}>
-            <Feather name="send" size={18} color={colors.white} />
+        <View style={st.composer}>
+          <View style={st.inputWrap}>
+            <TextInput
+              value={text}
+              onChangeText={setText}
+              placeholder="Message"
+              placeholderTextColor={colors.grey600}
+              style={[st.input, Platform.OS === 'web' && ({ outlineStyle: 'none' } as object)]}
+              multiline
+              maxLength={1000}
+              accessibilityLabel="Message"
+            />
+            <Feather name="mic" size={16} color={colors.grey600} />
+            <Feather name="camera" size={16} color={colors.grey600} />
+          </View>
+          <Pressable accessibilityRole="button" accessibilityLabel="Send" disabled={!text.trim() || sending || !matchId} onPress={() => send(text)} style={({ pressed }) => [st.send, pressed && { opacity: 0.8 }]}>
+            <Feather name="arrow-up" size={18} color={colors.grey100} />
           </Pressable>
-        </Row>
+        </View>
       )}
 
       <Tooltip visible={!!toast} text={toast} onHide={() => setToast('')} top={70} />
 
       <Sheet visible={menu === 'safety'} onClose={close} title="Connection & safety">
-        <ListRow label="Feedback" onPress={() => setMenu('feedback')} />
-        <ListRow label="Trust Signals" onPress={() => { close(); router.push({ pathname: '/safety/trust', params: { id } }); }} />
-        <ListRow label="Remove Connection" onPress={() => setMenu('remove')} />
-        <ListRow label="Report" danger onPress={() => { close(); router.push({ pathname: '/safety/report', params: { id } }); }} />
-        <ListRow label="Block" danger last onPress={() => setMenu('block')} />
+        <View style={{ gap: 14 }}>
+          {SAFETY.map((r) => (
+            <Pressable key={r.key} accessibilityRole="button" onPress={() => pick(r.key)} style={({ pressed }) => [st.menuRow, pressed && { opacity: 0.7 }]}>
+              <Feather name={r.icon} size={16} color={colors.grey900} />
+              <T v="body" style={{ flex: 1 }}>
+                {r.label}
+              </T>
+              <Feather name="chevron-right" size={16} color={colors.grey900} />
+            </Pressable>
+          ))}
+        </View>
       </Sheet>
 
-      <Sheet visible={menu === 'feedback'} onClose={close} title="Feedback">
-        <T v="h4">How was your conversation?</T>
-        <T v="body" color={colors.grey700} style={{ marginTop: 4, marginBottom: 16 }}>
+      <Sheet visible={menu === 'feedback'} onClose={close}>
+        <Row gap={12}>
+          <CircleButton size={34} label="Back" icon={<ChevronLeft />} onPress={() => setMenu('safety')} />
+          <Text style={st.sheetSmallTitle}>Feedback</Text>
+        </Row>
+        <Text style={[st.sheetTitle, { marginTop: 24 }]}>How was your conversation?</Text>
+        <T v="body" color={colors.grey700} style={{ marginTop: 12, marginBottom: 50 }}>
           Your feedback helps Mirror understand which connections feel meaningful and improve future introductions.
         </T>
-        <Row gap={10}>
+        <View style={{ gap: 14, marginBottom: 20 }}>
           {(['good', 'bad'] as const).map((r) => (
-            <Button
+            <Pressable
               key={r}
-              title={r === 'good' ? 'Good' : 'Bad'}
-              variant={r === 'good' ? 'primary' : 'secondary'}
-              style={{ flex: 1 }}
-              icon={<Feather name={r === 'good' ? 'thumbs-up' : 'thumbs-down'} size={16} color={r === 'good' ? colors.white : colors.grey900} />}
+              accessibilityRole="button"
+              style={({ pressed }) => [st.menuRow, { paddingLeft: 8 }, pressed && { opacity: 0.7 }]}
               onPress={async () => {
                 close();
                 setToast('Thanks — that helps.');
                 await api.submitFeedback(id, r).catch(() => {});
-              }}
-            />
+              }}>
+              <View style={[st.fbIcon, { backgroundColor: r === 'good' ? colors.green : colors.red }]}>
+                <Feather name={r === 'good' ? 'thumbs-up' : 'thumbs-down'} size={14} color={colors.white} />
+              </View>
+              <Text style={[st.fbLabel, { color: r === 'good' ? colors.green : colors.red }]}>{r === 'good' ? 'Good' : 'Bad'}</Text>
+            </Pressable>
           ))}
-        </Row>
+        </View>
       </Sheet>
 
       <Dialog
@@ -222,11 +258,21 @@ export default function Chat() {
 }
 
 const st = StyleSheet.create({
-  header: { paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.grey300 },
-  bubble: { maxWidth: '78%', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18 },
-  mine: { alignSelf: 'flex-end', backgroundColor: colors.primary, borderBottomRightRadius: 4 },
-  theirs: { alignSelf: 'flex-start', backgroundColor: colors.base, borderBottomLeftRadius: 4 },
-  composer: { paddingHorizontal: 12, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.grey300, alignItems: 'flex-end' },
-  input: { flex: 1, minHeight: 44, maxHeight: 120, backgroundColor: colors.base, borderRadius: radius.lg, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, fontFamily: fonts.body, fontSize: 15, color: colors.grey900 },
-  send: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 12 },
+  who: { alignItems: 'center', marginTop: -10 },
+  name: { fontFamily: fonts.bodySemi, fontSize: 16, lineHeight: 20, color: colors.grey900 },
+  bubble: { maxWidth: 338, paddingHorizontal: 9, paddingVertical: 15, borderRadius: 10 },
+  mine: { alignSelf: 'flex-end', backgroundColor: colors.primary, borderBottomRightRadius: 3 },
+  theirs: { alignSelf: 'flex-start', backgroundColor: colors.base, borderBottomLeftRadius: 3 },
+  typing: { alignSelf: 'flex-end', width: 201, height: 35, borderRadius: 10, backgroundColor: colors.primary, opacity: 0.25, marginTop: 16 },
+  prompt: { borderRadius: 360, borderWidth: 1, borderColor: colors.grey500, paddingHorizontal: 16, paddingVertical: 10 },
+  composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, paddingLeft: 11, paddingRight: 10, paddingTop: 10, paddingBottom: 10 },
+  inputWrap: { flex: 1, minHeight: 55, borderRadius: 28, backgroundColor: colors.base, flexDirection: 'row', alignItems: 'center', paddingLeft: 16, paddingRight: 26, gap: 10 },
+  input: { flex: 1, maxHeight: 120, paddingTop: 18, paddingBottom: 18, fontFamily: fonts.body, fontSize: 14, color: colors.grey900 },
+  send: { width: 55, height: 55, borderRadius: 28, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  menuRow: { minHeight: 50, borderRadius: 360, backgroundColor: colors.base, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16 },
+  sheetTitle: { fontFamily: fonts.heading, fontSize: 24, lineHeight: 28, color: colors.grey900 },
+  sheetSmallTitle: { fontFamily: fonts.heading, fontSize: 18, color: colors.grey900 },
+  fbIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  fbLabel: { fontFamily: fonts.bodySemi, fontSize: 14 },
 });

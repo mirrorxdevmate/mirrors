@@ -26,7 +26,7 @@ export default function AdminReports() {
 
   return (
     <Screen scroll>
-      <Header title="Reports" />
+      <Header title="Reports" spaced />
       <Segmented
         options={[{ label: 'Open', value: 'open' }, { label: 'All', value: 'all' }]}
         value={filter}

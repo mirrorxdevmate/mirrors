@@ -1,11 +1,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
-import { Button, Card, Field, Header, Screen, ToggleRow } from '@/components/ui';
+import { Button, CheckBox, Field, Header, Screen, T } from '@/components/ui';
 import { setPaymentMethod } from '@/services/api';
 import { useCheckout } from '@/store/checkout';
 import { useApp } from '@/store/useApp';
+import { colors } from '@/theme';
 
 const luhn = (num: string) => {
   let sum = 0;
@@ -30,7 +31,7 @@ export default function AddCard() {
   const [cvv, setCvv] = useState('');
   const [name, setName] = useState('');
   const [country, setCountry] = useState('United Arab Emirates');
-  const [save, setSave] = useState(true);
+  const [save, setSave] = useState(false);
   const [touched, setTouched] = useState(false);
 
   const digits = number.replace(/\D/g, '');
@@ -65,8 +66,9 @@ export default function AddCard() {
   };
 
   return (
-    <Screen scroll footer={<Button title="Continue" onPress={submit} />}>
+    <Screen scroll footer={<Button title="Continue" disabled={touched && !valid} onPress={submit} />}>
       <Header title="Add card" />
+      <View style={{ height: 24 }} />
       <Field
         label="Card number"
         value={number}
@@ -77,7 +79,8 @@ export default function AddCard() {
         textContentType="creditCardNumber"
         error={show('number')}
       />
-      <View style={{ flexDirection: 'row', gap: 10 }}>
+      <View style={{ height: 16 }} />
+      <View style={{ flexDirection: 'row', gap: 12 }}>
         <View style={{ flex: 1 }}>
           <Field
             label="Expiry date"
@@ -96,11 +99,16 @@ export default function AddCard() {
           <Field label="CVV" value={cvv} onChangeText={(t) => setCvv(t.replace(/\D/g, '').slice(0, 4))} placeholder="•••" keyboardType="number-pad" secureTextEntry autoComplete="cc-csc" error={show('cvv')} />
         </View>
       </View>
+      <View style={{ height: 16 }} />
       <Field label="Cardholder name" value={name} onChangeText={setName} placeholder="Name on card" autoComplete="cc-name" autoCapitalize="words" error={show('name')} />
+      <View style={{ height: 16 }} />
       <Field label="Billing country" value={country} onChangeText={setCountry} placeholder="Country" error={show('country')} />
-      <Card style={{ paddingVertical: 4 }}>
-        <ToggleRow label="Save this card for future purchases" value={save} onChange={setSave} />
-      </Card>
+      <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: save }} onPress={() => setSave(!save)} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16 }}>
+        <CheckBox on={save} size={14} />
+        <T v="body" color={colors.grey700}>
+          Save this card for future purchases
+        </T>
+      </Pressable>
     </Screen>
   );
 }

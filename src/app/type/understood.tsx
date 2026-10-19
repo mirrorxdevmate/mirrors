@@ -1,13 +1,14 @@
 import { Feather } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Sheet } from '@/components/overlays';
-import { Button, Card, Field, Header, Loading, Screen, T, Title } from '@/components/ui';
+import { Spinner } from '@/components/Spinner';
+import { Button, Field, Header, Screen, T } from '@/components/ui';
 import { interpretType } from '@/services/api';
 import { useApp, type TypeTrait } from '@/store/useApp';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 export default function WhatWeUnderstood() {
   const { edit } = useLocalSearchParams<{ edit?: string }>();
@@ -32,10 +33,16 @@ export default function WhatWeUnderstood() {
     };
   }, [type.description, interestedIn]);
 
+  // INTERPRETING
   if (loading)
     return (
       <Screen>
-        <Loading label="Understanding your preferences…" />
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 24, paddingBottom: 80 }}>
+          <Spinner />
+          <T v="bodyL" color={colors.grey700} center>
+            Understanding your preferences…
+          </T>
+        </View>
       </Screen>
     );
 
@@ -69,50 +76,60 @@ export default function WhatWeUnderstood() {
           }}
         />
       }>
-      {edit ? <Header /> : <View style={{ height: 16 }} />}
-      <Title sub="Change anything that doesn't sound like you.">Here&apos;s what we understood.</Title>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+      <Header title="Here's what we understood." />
+      <T v="bodyL" color={colors.grey700} style={{ marginTop: 24, marginBottom: 24, lineHeight: 20 }}>
+        {"Change anything that doesn't sound like you."}
+      </T>
+      <View style={{ gap: 12 }}>
         {traits.map((t, i) => (
           <Pressable
             key={t.key + i}
             accessibilityRole="button"
-            accessibilityHint="Edit"
+            accessibilityLabel={`${t.label}: ${t.value}. Edit`}
             onPress={() => setEditing({ index: i, label: t.label, value: t.value })}
-            style={{ width: '48%' }}>
-            <Card>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                <T v="overline" color={colors.primary}>
-                  {t.label}
-                </T>
-                <Feather name="edit-2" size={12} color={colors.grey600} />
-              </View>
-              <T v="bodyLM" style={{ marginTop: 4 }}>
-                {t.value}
-              </T>
-            </Card>
+            style={({ pressed }) => [st.card, pressed && { opacity: 0.8 }]}>
+            <View style={{ flex: 1, gap: 8 }}>
+              <Text style={st.label}>{t.label.toUpperCase()}</Text>
+              <Text style={st.value}>{t.value}</Text>
+            </View>
+            <Feather name="edit-2" size={15} color={colors.grey600} />
           </Pressable>
         ))}
       </View>
-      <Button title="+ Add something we missed" variant="outline" style={{ marginTop: 16 }} onPress={() => setEditing({ index: traits.length, label: '', value: '' })} />
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => setEditing({ index: traits.length, label: '', value: '' })}
+        style={({ pressed }) => [st.add, pressed && { opacity: 0.6 }]}>
+        <T v="body" color={colors.grey800} center>
+          + Add something we missed
+        </T>
+      </Pressable>
       <Sheet visible={!!editing} onClose={() => setEditing(null)} title={editing && editing.index < traits.length ? 'Edit' : 'Add something'}>
         {editing ? (
-          <>
+          <View style={{ gap: 12 }}>
             <Field label="What" value={editing.label} onChangeText={(label) => setEditing({ ...editing, label })} placeholder="e.g. Personality" />
             <Field label="Your preference" value={editing.value} onChangeText={(value) => setEditing({ ...editing, value })} placeholder="e.g. Warm and curious" />
             <Button title="Save" disabled={!editing.label.trim() || !editing.value.trim()} onPress={saveEdit} />
             {editing.index < traits.length ? (
               <Button
                 title="Remove"
-                variant="ghost"
+                variant="outline"
                 onPress={() => {
                   setTraits(traits.filter((_, i) => i !== editing.index));
                   setEditing(null);
                 }}
               />
             ) : null}
-          </>
+          </View>
         ) : null}
       </Sheet>
     </Screen>
   );
 }
+
+const st = StyleSheet.create({
+  card: { minHeight: 76, backgroundColor: colors.base, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  label: { fontFamily: fonts.bodyMedium, fontSize: 12, lineHeight: 20, color: colors.grey600 },
+  value: { fontFamily: fonts.bodyMedium, fontSize: 16, lineHeight: 20, color: colors.grey900 },
+  add: { marginTop: 16, height: 45, borderRadius: 360, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.grey500, justifyContent: 'center' },
+});

@@ -1,13 +1,10 @@
-import { Feather } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useState } from 'react';
-import { View } from 'react-native';
 
 import { CityPicker } from '@/components/CityPicker';
 import { useStepNav } from '@/components/step';
-import { Banner, Button, Header, ProgressHeader, Screen, T, Title } from '@/components/ui';
+import { Banner, Button, Header, LinkButton, ProgressHeader, Screen, Title } from '@/components/ui';
 import { useApp } from '@/store/useApp';
-import { colors } from '@/theme';
 
 export default function LocationStep() {
   const updateProfile = useApp((s) => s.updateProfile);
@@ -52,20 +49,12 @@ export default function LocationStep() {
       footer={
         <>
           <Button title="Enable" loading={loading} onPress={enable} />
-          <Button title="Enter location manually" variant="ghost" onPress={() => setManual(true)} />
+          <LinkButton title="Enter location manually" onPress={() => setManual(true)} />
         </>
       }>
       {edit ? <Header /> : <ProgressHeader step={5} total={8} />}
-      <Title sub="We use your location to show you people nearby. You can also enter a location manually if you prefer.">Enable your location</Title>
+      <Title sub="We use your location to show you people nearby. You can also enter a location manually if you'd rather not share it.">Enable your location</Title>
       {notice ? <Banner text={notice} /> : null}
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <View style={{ width: 120, height: 120, borderRadius: 60, backgroundColor: colors.secondary, alignItems: 'center', justifyContent: 'center' }}>
-          <Feather name="map-pin" size={44} color={colors.primary} />
-        </View>
-        <T v="caption" color={colors.grey600} center style={{ marginTop: 16, maxWidth: 260 }}>
-          Only your city is shown on your profile — never your exact location.
-        </T>
-      </View>
       <CityPicker visible={manual} onClose={() => setManual(false)} onPick={(c) => done(c, 'manual')} title="Where are you based?" />
     </Screen>
   );

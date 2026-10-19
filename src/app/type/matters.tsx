@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
-import { Button, Chip, Header, Screen, T, Title } from '@/components/ui';
+import { Button, Chip, Header, Screen, T } from '@/components/ui';
 import { MATTERS } from '@/data/options';
 import { useApp } from '@/store/useApp';
 import { colors } from '@/theme';
@@ -27,21 +27,21 @@ export default function WhatMattersMost() {
           }}
         />
       }>
-      {edit ? <Header /> : <View style={{ height: 16 }} />}
-      <Title sub="Select top 3. These carry the most weight in who you're introduced to.">What matters most when choosing someone?</Title>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+      <Header title="What matters most when choosing someone?" />
+      <T v="bodyL" color={colors.grey700} style={{ marginTop: 24, marginBottom: 24, lineHeight: 20 }}>
+        {"Select top 3. These carry the most weight in who you're introduced to."}
+      </T>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 10, rowGap: 16 }}>
         {MATTERS.map((m) => (
           <Chip
             key={m}
-            label={value.includes(m) ? `${value.indexOf(m) + 1}  ${m}` : m}
+            label={m}
             selected={value.includes(m)}
+            style={{ height: 40 }}
             onPress={() => setValue(value.includes(m) ? value.filter((x) => x !== m) : value.length < 3 ? [...value, m] : value)}
           />
         ))}
       </View>
-      <T v="caption" color={colors.grey600} style={{ marginTop: 14 }}>
-        {value.length}/3 selected
-      </T>
     </Screen>
   );
 }

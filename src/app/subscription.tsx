@@ -1,9 +1,10 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
-import { Dialog, Sheet } from '@/components/overlays';
-import { Banner, Button, Card, Header, ListRow, Row, Screen, T } from '@/components/ui';
+import { ChevronLeft } from '@/components/icons';
+import { Sheet } from '@/components/overlays';
+import { Button, Header, Row, Screen, T } from '@/components/ui';
 import { billingEnabled, manageSubscription, restore } from '@/lib/billing';
 import { PRICES, restorePurchases, setSubscriptionCancelled } from '@/services/api';
 import { BILLING_LABEL, PLAN_LABEL, money, useCheckout } from '@/store/checkout';
@@ -23,7 +24,7 @@ export default function ManageSubscription() {
   if (s.plan === 'free')
     return (
       <Screen>
-        <Header title="Manage Subscription" />
+        <Header title="Manage Subscription" spaced />
         <T v="body" color={colors.grey700}>
           You&apos;re on the Free plan.
         </T>
@@ -35,71 +36,79 @@ export default function ManageSubscription() {
   const price = PRICES[s.plan][s.billing];
   const until = fmtDate(s.renewsAt);
 
-  return (
-    <Screen scroll>
-      <Header title="Manage Subscription" />
-      {s.cancelled ? <Banner text={`You'll keep ${label} until ${until}, then move back to the free plan.`} /> : null}
-      <Card style={{ paddingVertical: 0 }}>
-        <ListRow label="Current plan" value={label} />
-        <ListRow label="Billing cycle" value={store ? BILLING_LABEL[s.billing] : `${BILLING_LABEL[s.billing]} · ${money(price)}`} />
-        <ListRow label={s.cancelled ? 'Ends on' : 'Next renewal'} value={until} />
-        <ListRow label="Payment method" value={s.paymentMethod} last />
-      </Card>
-      <Card style={{ paddingVertical: 0, marginTop: 12 }}>
-        <ListRow label="Change plan" onPress={() => router.push('/upgrade/plans')} />
-        <ListRow
-          label="Update payment method"
-          onPress={() => {
-            if (store) return manageSubscription(); // the store owns the payment method
-            useCheckout.getState().set({ method: s.paymentMethod });
-            router.push({ pathname: '/upgrade/payment', params: { update: '1' } });
-          }}
-        />
-        <ListRow label="Billing history" onPress={() => setHistory(true)} />
-        <ListRow
-          label={restoring ? 'Restoring…' : 'Restore purchases'}
-          last
-          onPress={async () => {
-            setRestoring(true);
-            await (store || billingEnabledHere ? restore() : restorePurchases()).catch(() => {});
-            await s.refreshAccount().catch(() => {});
-            setRestoring(false);
-            Alert.alert('Purchases restored', 'Your subscription is up to date.');
-          }}
-        />
-      </Card>
-      {s.cancelled ? (
-        <Button
-          title={`Resume ${label}`}
-          style={{ marginTop: 20 }}
-          onPress={async () => {
+  const actions = [
+    { label: 'Change plan', onPress: () => router.push('/upgrade/plans') },
+    {
+      label: 'Update payment method',
+      onPress: () => {
+        if (store) return manageSubscription(); // the store owns the payment method
+        useCheckout.getState().set({ method: s.paymentMethod });
+        router.push({ pathname: '/upgrade/payment', params: { update: '1' } });
+      },
+    },
+    { label: 'Billing history', onPress: () => setHistory(true) },
+    {
+      label: restoring ? 'Restoring…' : 'Restore purchases',
+      onPress: async () => {
+        setRestoring(true);
+        await (store || billingEnabledHere ? restore() : restorePurchases()).catch(() => {});
+        await s.refreshAccount().catch(() => {});
+        setRestoring(false);
+        Alert.alert('Purchases restored', 'Your subscription is up to date.');
+      },
+    },
+    s.cancelled
+      ? {
+          label: `Resume ${label}`,
+          onPress: async () => {
             if (store) return manageSubscription();
             await setSubscriptionCancelled(false).catch(() => {});
             s.refreshAccount();
-          }}
-        />
-      ) : (
-        <>
-          <Button title="Cancel subscription" variant="outline" style={{ marginTop: 20 }} onPress={() => (store ? manageSubscription() : setCancel(true))} />
-          <T v="caption" color={colors.grey600} center style={{ marginTop: 8 }}>
-            Cancelling keeps your {label} features until {until}. Nothing is deleted.
-          </T>
-        </>
-      )}
-      <Dialog
-        visible={cancel}
-        title={`Cancel ${label}?`}
-        message={`You'll keep ${label} until ${until}, then move back to the free plan. You won't be charged again.`}
-        primary={{ label: `Keep ${label}`, onPress: () => setCancel(false) }}
-        secondary={{
-          label: 'Cancel subscription',
-          onPress: () => {
-            setSubscriptionCancelled(true).then(() => s.refreshAccount()).catch(() => {});
-            setCancel(false);
           },
-        }}
-        onClose={() => setCancel(false)}
-      />
+        }
+      : { label: 'Cancel subscription', onPress: () => (store ? manageSubscription() : setCancel(true)) },
+  ];
+
+  return (
+    <Screen scroll>
+      <Header title="Manage Subscription" spaced />
+      <View style={st.card}>
+        <Info k="Current plan" v={label} />
+        <Info k="Billing cycle" v={store ? BILLING_LABEL[s.billing] : `${BILLING_LABEL[s.billing]} · ${money(price)}`} />
+        <Info k={s.cancelled ? 'Ends on' : 'Next renewal'} v={until} />
+        <Info k="Payment method" v={s.paymentMethod || '—'} />
+      </View>
+      <View style={[st.card, { marginTop: 16, paddingVertical: 8 }]}>
+        {actions.map((a, i) => (
+          <Pressable key={a.label} accessibilityRole="button" onPress={a.onPress} style={({ pressed }) => [st.action, i < actions.length - 1 && st.sep, pressed && { opacity: 0.6 }]}>
+            <T v="caption" color={colors.grey700} style={{ flex: 1, fontSize: 12 }}>
+              {a.label}
+            </T>
+            <View style={{ transform: [{ scaleX: -1 }] }}>
+              <ChevronLeft />
+            </View>
+          </Pressable>
+        ))}
+      </View>
+      <T v="body" color={colors.grey700} style={{ marginTop: 16 }}>
+        {s.cancelled ? `You'll keep ${label} until ${until}, then move back to the free plan.` : `Cancelling keeps your ${label} features until ${until}. Nothing is deleted.`}
+      </T>
+      <Sheet visible={cancel} onClose={() => setCancel(false)} title={`Cancel ${label}?`}>
+        <T v="body" color={colors.grey700}>
+          {`You'll keep ${label} until ${until}, then move back to the free plan. You won't be charged again.`}
+        </T>
+        <View style={{ gap: 14, marginTop: 50, marginBottom: 8 }}>
+          <Button
+            title="Cancel subscription"
+            variant="outline"
+            onPress={() => {
+              setSubscriptionCancelled(true).then(() => s.refreshAccount()).catch(() => {});
+              setCancel(false);
+            }}
+          />
+          <Button title={`Keep ${label}`} onPress={() => setCancel(false)} />
+        </View>
+      </Sheet>
       <Sheet visible={history} onClose={() => setHistory(false)} title="Billing history">
         <Row style={{ paddingVertical: 12 }}>
           <T v="body" style={{ flex: 1 }}>
@@ -107,10 +116,27 @@ export default function ManageSubscription() {
           </T>
           <T v="bodyM">{money(price * (1 + PRICES.vat))}</T>
         </Row>
-        <T v="caption" color={colors.grey600}>
+        <T v="caption" color={colors.grey600} style={{ marginBottom: 12 }}>
           Receipts are also sent to your account email.
         </T>
       </Sheet>
     </Screen>
   );
 }
+
+function Info({ k, v }: { k: string; v: string }) {
+  return (
+    <Row style={{ minHeight: 23 }}>
+      <T v="caption" color={colors.grey700} style={{ flex: 1, fontSize: 12 }}>
+        {k}
+      </T>
+      <T v="body">{v}</T>
+    </Row>
+  );
+}
+
+const st = StyleSheet.create({
+  card: { backgroundColor: colors.base, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, gap: 4 },
+  action: { minHeight: 44, flexDirection: 'row', alignItems: 'center' },
+  sep: { borderBottomWidth: 1, borderBottomColor: colors.grey400 },
+});

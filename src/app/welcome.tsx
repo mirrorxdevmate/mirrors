@@ -1,35 +1,33 @@
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, LinkButton, T } from '@/components/ui';
-import { WELCOME_PHOTO } from '@/data/profiles';
+import { MirrorLogo } from '@/components/icons';
+import { Button } from '@/components/ui';
 import { colors, fonts } from '@/theme';
+
+// Still frame of the welcome video. Swap for <VideoView> (expo-video) once the clip is delivered.
+const BACKGROUND = require('../../assets/images/welcome-bg.jpg');
 
 export default function Welcome() {
   return (
-    <View style={{ flex: 1, backgroundColor: colors.grey900 }}>
+    <View style={{ flex: 1, backgroundColor: '#2A1E16' }}>
       <StatusBar style="light" />
-      <Image source={WELCOME_PHOTO} style={StyleSheet.absoluteFill} contentFit="cover" transition={300} />
-      <LinearGradient colors={['rgba(0,0,0,0.65)', 'rgba(0,0,0,0.05)', 'rgba(0,0,0,0.85)']} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
-      <SafeAreaView style={{ flex: 1, paddingHorizontal: 16 }}>
-        <View style={{ marginTop: 60 }}>
-          <T v="h1" color={colors.white} accessibilityRole="header">
-            Mirror
-          </T>
-          <T v="caption" color={colors.primary} style={{ fontFamily: fonts.display, fontSize: 14 }}>
-            Meet people, on purpose.
-          </T>
-          <T v="body" color="rgba(255,255,255,0.85)" style={{ marginTop: 12, maxWidth: 280 }}>
-            Find better matches. Understand compatibility. Connect with confidence.
-          </T>
+      <Image source={BACKGROUND} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="top" />
+      <SafeAreaView style={{ flex: 1 }}>
+        <View style={st.brand}>
+          <MirrorLogo />
+          <Text style={st.tagline}>Meet people, on purpose.</Text>
         </View>
         <View style={{ flex: 1 }} />
-        <Button title="Continue with email" onPress={() => router.push('/email')} />
-        <LinkButton title="I already have an account" color={colors.white} onPress={() => router.push('/email')} />
+        <View style={{ paddingHorizontal: 16 }}>
+          <Button title="Continue with phone number" onPress={() => router.push('/phone')} />
+        </View>
+        <Pressable accessibilityRole="button" hitSlop={8} onPress={() => router.push({ pathname: '/phone', params: { returning: '1' } })} style={st.already}>
+          <Text style={st.alreadyText}>I already have an account</Text>
+        </Pressable>
         <Text style={st.legal}>
           By signing up, you agree to our{' '}
           <Text style={st.link} onPress={() => router.push({ pathname: '/legal', params: { doc: 'terms' } })}>
@@ -47,6 +45,10 @@ export default function Welcome() {
 }
 
 const st = StyleSheet.create({
-  legal: { fontFamily: fonts.body, fontSize: 11, lineHeight: 16, color: 'rgba(255,255,255,0.85)', textAlign: 'center', marginTop: 8, marginBottom: 8 },
-  link: { textDecorationLine: 'underline', color: colors.white },
+  brand: { paddingHorizontal: 16, marginTop: 66 },
+  tagline: { fontFamily: fonts.tagline, fontSize: 14, lineHeight: 16, color: colors.primary, marginTop: 13 },
+  already: { alignSelf: 'center', marginTop: 11, paddingVertical: 5 },
+  alreadyText: { fontFamily: fonts.body, fontSize: 14, lineHeight: 16, color: colors.grey300, textDecorationLine: 'underline' },
+  legal: { fontFamily: 'Urbanist_400Regular', fontSize: 12, lineHeight: 16, color: colors.grey300, textAlign: 'center', marginTop: 25, marginBottom: 22, paddingHorizontal: 16 },
+  link: { textDecorationLine: 'underline' },
 });

@@ -2,15 +2,15 @@ import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Sheet } from '@/components/overlays';
-import { Avatar } from '@/components/profile';
-import { Button, Row, Screen, T, ToggleRow, VerifiedTick } from '@/components/ui';
+import { Verified } from '@/components/profile';
+import { Button, Row, Screen, T, Toggle } from '@/components/ui';
 import type { Profile } from '@/data/profiles';
 import { getLikes, getMatches, onMessages, type MatchRow } from '@/services/api';
 import { useApp } from '@/store/useApp';
-import { colors, radius } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 export default function Chats() {
   const verifiedOnly = useApp((s) => s.settings.verifiedChatsOnly);
@@ -48,64 +48,68 @@ export default function Chats() {
 
   return (
     <Screen pad={false} edges={['top']}>
-      <Row style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-        <T v="h2" style={{ flex: 1 }}>
+      <Row style={{ paddingHorizontal: 16, marginTop: 12, height: 24 }}>
+        <Text style={[st.h1, { flex: 1 }]} accessibilityRole="header">
           Chat
-        </T>
+        </Text>
         <Pressable accessibilityLabel="Chat settings" hitSlop={10} onPress={() => setSettings(true)}>
-          <Feather name="settings" size={20} color={colors.grey900} />
+          <Feather name="settings" size={16} color={colors.grey900} />
         </Pressable>
       </Row>
 
-      {fresh.length ? (
-        <View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 14, paddingBottom: 12 }}>
-            {fresh.map((p) => (
-              <Pressable key={p.id} onPress={() => router.push(`/chat/${p.id}`)} style={{ alignItems: 'center', width: 64 }} accessibilityLabel={`New match ${p.name}`}>
-                <Avatar uri={p.photos[0]} size={60} ring />
-                <Row gap={2} style={{ marginTop: 4 }}>
-                  <T v="caption" numberOfLines={1}>
-                    {p.name}
-                  </T>
-                  {p.verified ? <VerifiedTick size={12} /> : null}
-                </Row>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
-      ) : null}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 8, paddingTop: 20, paddingBottom: 16 }}>
+        {people.map((p) => {
+          const isNew = fresh.some((f) => f.id === p.id);
+          return (
+            <Pressable key={p.id} onPress={() => router.push(`/chat/${p.id}`)} style={{ alignItems: 'center', width: 60 }} accessibilityLabel={`${isNew ? 'New match ' : ''}${p.name}`}>
+              <View style={[st.ring, isNew && { borderColor: colors.primary }]}>
+                {p.photos[0] ? <Image source={p.photos[0]} style={StyleSheet.absoluteFill} contentFit="cover" /> : null}
+              </View>
+              {isNew ? (
+                <View style={st.newBadge}>
+                  <Text style={st.newText}>New</Text>
+                </View>
+              ) : null}
+              <Row gap={2} style={{ marginTop: isNew ? 4 : 8 }}>
+                <Text style={st.avatarName} numberOfLines={1}>
+                  {p.name}
+                </Text>
+                {p.verified ? <Verified size={10} /> : null}
+              </Row>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
 
       <View style={st.panel}>
-        <T v="h3" style={{ padding: 16, paddingBottom: 8 }}>
-          Messages
-        </T>
+        <Text style={st.h2}>Messages</Text>
         <FlatList
           data={convos}
           keyExtractor={(r) => r.matchId}
+          ItemSeparatorComponent={() => <View style={st.sep} />}
           ListHeaderComponent={
             likes.count ? (
-              <Pressable style={st.row} onPress={() => router.navigate('/(tabs)/likes')} accessibilityRole="button">
-                <View>
-                  {likes.photo ? <Image source={likes.photo} style={{ width: 52, height: 52, borderRadius: 26 }} blurRadius={plan === 'free' ? 14 : 0} /> : null}
-                  <View style={st.online} />
-                </View>
-                <T v="bodyS">
-                  {likes.name ?? 'Someone'}
-                  {likes.count > 1 ? ` and ${likes.count - 1}+` : ''}{' '}
-                  <T v="caption" color={colors.grey600}>
-                    Likes you
-                  </T>
-                </T>
-              </Pressable>
+              <>
+                <Pressable style={st.row} onPress={() => router.navigate('/(tabs)/likes')} accessibilityRole="button">
+                  <View>
+                    {likes.photo ? <Image source={likes.photo} style={st.avatar} blurRadius={plan === 'free' ? 14 : 0} /> : <View style={[st.avatar, { backgroundColor: colors.grey300 }]} />}
+                    <View style={[st.dot, { backgroundColor: colors.green }]} />
+                  </View>
+                  <Text style={st.rowName}>
+                    {likes.name ?? 'Someone'}
+                    {likes.count > 1 ? ` and ${likes.count - 1}+` : ''} <Text style={st.likesYou}>Likes you</Text>
+                  </Text>
+                </Pressable>
+                {convos.length ? <View style={st.sep} /> : null}
+              </>
             ) : null
           }
           ListEmptyComponent={
             <View style={{ alignItems: 'center', padding: 32 }}>
-              <Feather name="message-circle" size={36} color={colors.grey400} />
-              <T v="h4" center style={{ marginTop: 12 }}>
+              <T v="bodyLM" center>
                 {people.length ? 'Say hello to your matches above' : 'No conversations yet'}
               </T>
-              <T v="body" center color={colors.grey600} style={{ marginTop: 6 }}>
+              <T v="body" center color={colors.grey700} style={{ marginTop: 6 }}>
                 {people.length ? 'Tap a match to start a conversation.' : 'When you both choose to meet, you can chat here.'}
               </T>
               {!people.length ? <Button title="See introductions" small style={{ marginTop: 16 }} onPress={() => router.navigate('/(tabs)')} /> : null}
@@ -116,20 +120,20 @@ export default function Chats() {
             const last = r.last!;
             const unread = r.unread > 0;
             return (
-              <Pressable style={st.row} onPress={() => router.push(`/chat/${p.id}`)} accessibilityRole="button">
+              <Pressable style={st.row} onPress={() => router.push(`/chat/${p.id}`)} accessibilityRole="button" accessibilityLabel={`${p.name}${unread ? ', unread' : ''}: ${last.body}`}>
                 <View>
-                  <Avatar uri={p.photos[0]} size={52} />
-                  {unread ? <View style={st.unread} /> : null}
+                  {p.photos[0] ? <Image source={p.photos[0]} style={st.avatar} contentFit="cover" /> : <View style={[st.avatar, { backgroundColor: colors.grey300 }]} />}
+                  {unread ? <View style={[st.dot, { backgroundColor: colors.red }]} /> : null}
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Row gap={4}>
-                    <T v="bodyS">{p.name}</T>
-                    {p.verified ? <VerifiedTick size={14} /> : null}
+                <View style={{ flex: 1, gap: 8 }}>
+                  <Row gap={8}>
+                    <Text style={st.rowName}>{p.name}</Text>
+                    {p.verified ? <Verified size={14} /> : null}
                   </Row>
-                  <T v="caption" color={unread ? colors.grey900 : colors.grey600} numberOfLines={1} style={{ marginTop: 2 }}>
+                  <Text style={[st.preview, unread && { color: colors.grey900 }]} numberOfLines={1}>
                     {last.fromMe ? 'You: ' : ''}
                     {last.body}
-                  </T>
+                  </Text>
                 </View>
               </Pressable>
             );
@@ -138,15 +142,33 @@ export default function Chats() {
       </View>
 
       <Sheet visible={settings} onClose={() => setSettings(false)} title="Chat Settings">
-        <ToggleRow label="Show verified chats only" sub="Only show conversations with verified people." value={verifiedOnly} onChange={(v) => updateSettings({ verifiedChatsOnly: v })} />
+        <View style={st.setting}>
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={st.rowName}>Show verified chats only</Text>
+            <Text style={st.preview}>Only show conversations with verified people.</Text>
+          </View>
+          <Toggle label="Show verified chats only" value={verifiedOnly} onChange={(v) => updateSettings({ verifiedChatsOnly: v })} />
+        </View>
+        <View style={{ height: 120 }} />
       </Sheet>
     </Screen>
   );
 }
 
 const st = StyleSheet.create({
-  panel: { flex: 1, backgroundColor: colors.base, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.grey300 },
-  online: { position: 'absolute', right: 0, top: 22, width: 10, height: 10, borderRadius: 5, backgroundColor: colors.green, borderWidth: 2, borderColor: colors.base },
-  unread: { position: 'absolute', right: -1, top: 24, width: 10, height: 10, borderRadius: 5, backgroundColor: colors.red, borderWidth: 2, borderColor: colors.base },
+  h1: { fontFamily: fonts.heading, fontSize: 24, lineHeight: 28, color: colors.grey900 },
+  h2: { fontFamily: fonts.heading, fontSize: 18, lineHeight: 24, color: colors.grey900, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 },
+  ring: { width: 60, height: 60, borderRadius: 30, borderWidth: 3, borderColor: colors.base, overflow: 'hidden', backgroundColor: colors.grey200, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 12, elevation: 2 },
+  newBadge: { marginTop: -6, height: 16, paddingHorizontal: 5, borderRadius: 15, backgroundColor: colors.primary, justifyContent: 'center' },
+  newText: { fontFamily: fonts.headingMedium, fontSize: 10, color: colors.white },
+  avatarName: { fontFamily: fonts.headingMedium, fontSize: 12, lineHeight: 14, color: colors.grey900, maxWidth: 46 },
+  panel: { flex: 1, backgroundColor: colors.base, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, height: 93 },
+  sep: { height: 1, backgroundColor: colors.white },
+  avatar: { width: 60, height: 60, borderRadius: 30 },
+  dot: { position: 'absolute', right: -5, top: 25, width: 10, height: 10, borderRadius: 5 },
+  rowName: { fontFamily: 'Urbanist_600SemiBold', fontSize: 16, lineHeight: 20, color: colors.grey900 },
+  likesYou: { fontFamily: 'Urbanist_400Regular', fontSize: 14, color: colors.grey600 },
+  preview: { fontFamily: 'Urbanist_400Regular', fontSize: 14, lineHeight: 20, color: colors.grey700 },
+  setting: { minHeight: 80, borderRadius: 16, backgroundColor: colors.base, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, gap: 12 },
 });

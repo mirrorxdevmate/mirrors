@@ -1,31 +1,31 @@
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Tabs, type BottomTabBarProps } from 'expo-router/js-tabs';
 import { useEffect } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { T, tap } from '@/components/ui';
+import { AppIcon } from '@/components/appIcons';
+import { tap } from '@/components/ui';
 import { listenForNotificationTaps, registerForPush } from '@/lib/push';
 import { getMatches, onMessages } from '@/services/api';
 import { useApp } from '@/store/useApp';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 
-const ICONS: Record<string, (c: string) => React.ReactNode> = {
-  index: (c) => <MaterialCommunityIcons name="heart-multiple-outline" size={24} color={c} />,
-  likes: (c) => <Feather name="user-plus" size={22} color={c} />,
-  chats: (c) => <Feather name="message-circle" size={22} color={c} />,
-  profile: (c) => <Feather name="user" size={22} color={c} />,
+const ICONS: Record<string, (on: boolean) => React.ReactNode> = {
+  index: (on) => <AppIcon name={on ? 'navMatches' : 'navMatchesOff'} height={18} />,
+  likes: (on) => <AppIcon name="navLikes" height={18} color={on ? colors.primary : undefined} />,
+  chats: (on) => <AppIcon name={on ? 'navChatOn' : 'navChat'} height={20} />,
+  profile: (on) => <AppIcon name={on ? 'navProfileOn' : 'navProfile'} height={20} />,
 };
 const LABELS: Record<string, string> = { index: 'Matches', likes: 'Likes', chats: 'Chat', profile: 'Profile' };
 
+/** Figma "Navbar": white, 16px padding, icon over Inter 14 label; active = coral Medium, inactive = #131821 at 70%. */
 function TabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const unread = useApp((s) => s.unread);
   return (
-    <View style={[st.bar, { paddingBottom: Math.max(insets.bottom, 10) }]} accessibilityRole="tablist">
+    <View style={[st.bar, { paddingBottom: Math.max(insets.bottom, 12) }]} accessibilityRole="tablist">
       {state.routes.map((route, i) => {
         const focused = state.index === i;
-        const color = focused ? colors.primary : colors.grey700;
         return (
           <Pressable
             key={route.key}
@@ -38,13 +38,11 @@ function TabBar({ state, navigation }: BottomTabBarProps) {
               const e = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
               if (!focused && !e.defaultPrevented) navigation.navigate(route.name);
             }}>
-            <View>
-              {ICONS[route.name]?.(color)}
+            <View style={{ height: 22, justifyContent: 'flex-end' }}>
+              {ICONS[route.name]?.(focused)}
               {route.name === 'chats' && unread > 0 ? <View style={st.dot} /> : null}
             </View>
-            <T v="caption" color={color} style={{ marginTop: 4 }}>
-              {LABELS[route.name]}
-            </T>
+            <Text style={[st.label, focused ? st.labelOn : null]}>{LABELS[route.name]}</Text>
           </Pressable>
         );
       })}
@@ -95,7 +93,9 @@ export default function TabsLayout() {
 }
 
 const st = StyleSheet.create({
-  bar: { flexDirection: 'row', backgroundColor: colors.white, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.grey300 },
-  item: { flex: 1, alignItems: 'center' },
+  bar: { flexDirection: 'row', backgroundColor: colors.white, paddingTop: 16, paddingHorizontal: 16 },
+  item: { flex: 1, alignItems: 'center', gap: 3 },
+  label: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20, color: colors.grey900, opacity: 0.7 },
+  labelOn: { fontFamily: fonts.bodyMedium, color: colors.primary, opacity: 1 },
   dot: { position: 'absolute', right: -3, top: -2, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.red },
 });

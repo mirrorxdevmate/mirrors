@@ -10,7 +10,7 @@ export default function Preferences() {
   const updateProfile = useApp((s) => s.updateProfile);
   return (
     <Screen scroll>
-      <Header title="Preferences" />
+      <Header title="Preferences" spaced />
       <SectionLabel>Who you&apos;d like to meet</SectionLabel>
       <SingleSelect options={['Man', 'Woman', 'Everyone']} value={interestedIn} onChange={(v) => updateProfile({ interestedIn: v as UserProfile['interestedIn'] })} />
       <SectionLabel>Matching</SectionLabel>

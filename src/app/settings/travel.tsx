@@ -1,22 +1,17 @@
 import { Feather } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CityPicker } from '@/components/CityPicker';
-import { Locked } from '@/components/Locked';
-import { Tooltip } from '@/components/overlays';
-import { Badge, Banner, Button, Card, Field, Header, Row, Screen, SectionLabel, T } from '@/components/ui';
+import { Badge, Button, Header, Row, Screen, T, Toggle } from '@/components/ui';
 import { planAtLeast, useApp } from '@/store/useApp';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 
-function validDate(s: string) {
-  const m = s.match(/^(\d{2})\s*\/\s*(\d{2})\s*\/\s*(\d{4})$/);
-  if (!m) return false;
-  const d = new Date(+m[3], +m[2] - 1, +m[1]);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return d.getDate() === +m[1] && d >= today;
-}
+const today = () => {
+  const d = new Date();
+  return `${String(d.getDate()).padStart(2, '0')} / ${String(d.getMonth() + 1).padStart(2, '0')} / ${d.getFullYear()}`;
+};
 
 export default function TravelMode() {
   const plan = useApp((s) => s.plan);
@@ -25,94 +20,83 @@ export default function TravelMode() {
   const updateSettings = useApp((s) => s.updateSettings);
   const unlocked = planAtLeast(plan, 'premium');
   const [city, setCity] = useState(travel?.city ?? '');
-  const [date, setDate] = useState(travel?.date ?? '');
   const [picker, setPicker] = useState(false);
   const [tip, setTip] = useState(false);
+  const dest = (city || 'Paris').split(',')[0];
 
-  const formatDate = (t: string) => {
-    const d = t.replace(/\D/g, '').slice(0, 8);
-    return [d.slice(0, 2), d.slice(2, 4), d.slice(4)].filter(Boolean).join(' / ');
+  const setActive = (on: boolean) => {
+    if (!unlocked) return setTip(true);
+    if (!on) return updateSettings({ travel: null });
+    if (!city) return setPicker(true);
+    updateSettings({ travel: { city, date: today() }, recentDestinations: [city, ...recent.filter((r) => r !== city)].slice(0, 5) });
   };
-  const dateOk = validDate(date);
 
   return (
-    <Screen scroll>
-      <Header
-        title="Travel Mode"
-        right={
-          <Pressable accessibilityLabel="About travel mode" hitSlop={10} onPress={() => setTip(true)}>
-            <Feather name="info" size={20} color={colors.grey700} />
-          </Pressable>
-        }
-      />
-      <Row>
-        <T v="h2" style={{ flex: 1 }}>
-          {city ? `Going to ${city.split(',')[0]}?` : 'Going somewhere soon?'}
-        </T>
+    <Screen
+      scroll
+      footer={
+        unlocked ? undefined : (
+          <>
+            {tip ? (
+              <View style={st.tip}>
+                <Feather name="alert-circle" size={14} color={colors.primary} style={{ marginTop: 2 }} />
+                <T v="body" color={colors.grey800} style={{ flex: 1 }}>
+                  Your profile shows the destination and dates to people there, so nobody is misled about where you are.
+                </T>
+              </View>
+            ) : null}
+            <Button title="See plans" onPress={() => router.push({ pathname: '/upgrade/plans', params: { plan: 'premium' } })} />
+          </>
+        )
+      }>
+      <Header title="Travel Mode" big={false} />
+      <Row gap={10} style={{ marginTop: 24 }}>
+        <Text style={st.h1}>Going to {dest} next week?</Text>
         {!unlocked ? <Badge kind="premium" /> : null}
       </Row>
-      <T v="body" color={colors.grey700} style={{ marginTop: 6, marginBottom: 20 }}>
+      <T v="body" color={colors.grey700} style={{ marginTop: 12 }}>
         Set a destination and Mirror starts preparing introductions before you arrive.
       </T>
-      {travel ? <Banner tone="success" text={`Travel Mode is on: ${travel.city.split(',')[0]} from ${travel.date}.`} /> : null}
 
-      <SectionLabel>Destination</SectionLabel>
-      <Card onPress={unlocked ? () => setPicker(true) : undefined} style={{ marginBottom: 12 }}>
-        <Row>
-          <Feather name="search" size={16} color={colors.grey600} />
-          <T v="body" color={city ? colors.grey900 : colors.grey500}>
-            {city || 'Search a city'}
-          </T>
-        </Row>
-      </Card>
-      <Field
-        label="Arrival Date"
-        value={date}
-        editable={unlocked}
-        onChangeText={(t) => setDate(formatDate(t))}
-        placeholder="DD / MM / YYYY"
-        keyboardType="number-pad"
-        error={date.length === 14 && !dateOk ? 'Choose a valid future date.' : undefined}
-      />
+      <Text style={[st.label, { marginTop: 24 }]}>Destination</Text>
+      <Pressable accessibilityRole="button" onPress={() => (unlocked ? setPicker(true) : setTip(true))} style={st.search}>
+        <Feather name="search" size={14} color={colors.grey600} />
+        <T v="body" color={city ? colors.grey900 : colors.grey600}>
+          {city || 'Search a city'}
+        </T>
+      </Pressable>
+      <Row style={{ marginTop: 16, justifyContent: 'space-between' }}>
+        <Text style={[st.label, !unlocked && { color: colors.grey700 }]}>Start showing me introductions</Text>
+        <Toggle label="Start showing me introductions" value={!!travel && unlocked} onChange={setActive} />
+      </Row>
 
-      {unlocked ? (
+      {unlocked && recent.length ? (
         <>
-          <Button
-            title={travel ? 'Update trip' : 'Start showing me introductions'}
-            disabled={!city || !dateOk}
-            onPress={() => {
-              updateSettings({ travel: { city, date }, recentDestinations: [city, ...recent.filter((r) => r !== city)].slice(0, 5) });
-              setTip(true);
-            }}
-          />
-          {travel ? (
-            <Button
-              title="Turn off Travel Mode"
-              variant="ghost"
-              onPress={() => {
-                updateSettings({ travel: null });
-                setCity('');
-                setDate('');
-              }}
-            />
-          ) : null}
-          <SectionLabel>Recent Destinations</SectionLabel>
-          <View style={{ gap: 8 }}>
+          <Text style={[st.small, { marginTop: 40 }]}>Recent Destinations</Text>
+          <View style={{ gap: 12, marginTop: 16, alignItems: 'flex-start' }}>
             {recent.map((r) => (
-              <Card key={r} onPress={() => setCity(r)}>
-                <Row>
-                  <Feather name="clock" size={14} color={colors.grey600} />
-                  <T v="body">{r}</T>
-                </Row>
-              </Card>
+              <Pressable key={r} accessibilityRole="button" onPress={() => setCity(r)} style={st.chip}>
+                <T v="body" color={colors.grey800}>
+                  {r.split(',')[0]}
+                </T>
+                <Pressable accessibilityLabel={`Remove ${r}`} hitSlop={8} onPress={() => updateSettings({ recentDestinations: recent.filter((x) => x !== r) })}>
+                  <Feather name="x-circle" size={13} color={colors.grey700} />
+                </Pressable>
+              </Pressable>
             ))}
           </View>
         </>
-      ) : (
-        <Locked need="premium" text="Travel Mode is part of Premium." />
-      )}
+      ) : null}
       <CityPicker visible={picker} onClose={() => setPicker(false)} onPick={setCity} title="Where are you going?" />
-      <Tooltip visible={tip} onHide={() => setTip(false)} top={64} text="Your profile shows the destination and dates to people there, so nobody is misled about where you are." />
     </Screen>
   );
 }
+
+const st = StyleSheet.create({
+  h1: { fontFamily: fonts.heading, fontSize: 24, lineHeight: 28, color: colors.grey900, flexShrink: 1 },
+  label: { fontFamily: fonts.bodySemi, fontSize: 16, lineHeight: 20, color: colors.grey900, flexShrink: 1 },
+  small: { fontFamily: fonts.bodySemi, fontSize: 14, lineHeight: 20, color: colors.grey900 },
+  search: { marginTop: 12, height: 55, borderRadius: 360, backgroundColor: colors.base, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16 },
+  chip: { height: 32, borderRadius: 360, backgroundColor: colors.base, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14 },
+  tip: { flexDirection: 'row', gap: 8, backgroundColor: colors.secondary, borderRadius: 8, padding: 12, marginBottom: 8 },
+});

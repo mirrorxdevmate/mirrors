@@ -19,7 +19,7 @@ export default function Safety() {
   const blocked = blockedList.length;
   return (
     <Screen scroll>
-      <Header title="Safety" />
+      <Header title="Safety" spaced />
       {TIPS.map(([h, b]) => (
         <Card key={h} style={{ marginBottom: 10 }}>
           <Row style={{ alignItems: 'flex-start' }} gap={10}>

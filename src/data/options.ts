@@ -10,13 +10,13 @@ export const CHILDREN = [
 ];
 export const LIFESTYLE: { key: string; label: string; options: string[] }[] = [
   { key: 'smoking', label: 'Smoking', options: ['Never', 'Sometimes', 'Regularly', 'Trying to quit'] },
-  { key: 'drinking', label: 'Drinking', options: ['Never', 'Socially', 'Regularly'] },
-  { key: 'exercise', label: 'Exercise', options: ['Rarely', 'Sometimes', 'Very active'] },
+  { key: 'drinking', label: 'Drinking', options: ['Never', 'Socially', 'Sometimes', 'Regularly'] },
+  { key: 'exercise', label: 'Exercise', options: ['Rarely', 'Sometimes', 'Regularly', 'Very active'] },
   { key: 'social', label: 'Social Style', options: ['Homebody', 'Balanced', 'Social'] },
   { key: 'pets', label: 'Pets', options: ['No pets', 'Have pets', 'Love pets', "Don't prefer"] },
 ];
 export const HOBBIES = ['Travel', 'Fitness', 'Food', 'Cooking', 'Music', 'Reading', 'Sports', 'Movies', 'Fashion', 'Art', 'Gaming', 'Hiking', 'Socializing', 'Wellness', 'Photography'];
-export const FAITHS = ['Muslim', 'Christian', 'Hindu', 'Buddhist', 'Jewish', 'Spiritual', 'Not religious', 'Prefer not to say'];
+export const FAITHS = ['Muslim', 'Christian', 'Hindu', 'Buddhist', 'Jewish', 'Prefer not to say'];
 export const EDUCATION = ['High school', "Bachelor's", "Master's", 'Doctorate', 'Other', 'Prefer not to say'];
 export const CULTURES = ['South Asian', 'Middle Eastern / North African', 'Black / African', 'East Asian', 'White / European', 'Latin / Hispanic', 'Other', 'Prefer not to say'];
 export const MATTERS = ['Personality', 'Communication', 'Physical attraction', 'Family goals', 'Shared values', 'Financial stability', 'Lifestyle', 'Religion', 'Children', 'Ambition', 'Education', 'Career', 'Interests', 'Location'];

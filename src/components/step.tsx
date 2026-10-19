@@ -1,8 +1,9 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
+import { Text } from 'react-native';
 
-import { Button, Header, Option, ProgressHeader, Screen, T, Title } from './ui';
-import { colors } from '@/theme';
+import { Button, Header, LinkButton, Option, ProgressHeader, Screen, T, Title } from './ui';
+import { colors, fonts } from '@/theme';
 
 /** Scaffold shared by every numbered onboarding step (progress, title, sticky Continue/Skip). */
 export function StepScreen({
@@ -17,11 +18,12 @@ export function StepScreen({
   scroll = true,
   loading,
   cta = 'Continue',
+  titleExtra,
 }: {
   step: number;
   total: number;
   title: string;
-  sub?: string;
+  sub?: React.ReactNode;
   canContinue?: boolean;
   onContinue: () => void;
   onSkip?: () => void;
@@ -29,6 +31,7 @@ export function StepScreen({
   scroll?: boolean;
   loading?: boolean;
   cta?: string;
+  titleExtra?: React.ReactNode;
 }) {
   const { edit } = useLocalSearchParams<{ edit?: string }>();
   return (
@@ -37,11 +40,13 @@ export function StepScreen({
       footer={
         <>
           <Button title={edit ? 'Save' : cta} disabled={!canContinue} loading={loading} onPress={onContinue} />
-          {onSkip && !edit ? <Button title="Skip" variant="ghost" onPress={onSkip} /> : null}
+          {onSkip && !edit ? <LinkButton title="Skip" onPress={onSkip} /> : null}
         </>
       }>
       {edit ? <Header /> : <ProgressHeader step={step} total={total} />}
-      <Title sub={sub}>{title}</Title>
+      <Title sub={sub} extra={titleExtra}>
+        {title}
+      </Title>
       {children}
     </Screen>
   );
@@ -81,6 +86,9 @@ export const Hint = ({ children }: { children: string }) => (
     {children}
   </T>
 );
+
+/** " (Optional)" suffix in titles: Urbanist Medium 18. */
+export const OptionalTag = () => <Text style={{ fontFamily: fonts.headingMedium, fontSize: 18, color: colors.grey900 }}> (Optional)</Text>;
 
 export const go = (path: string) => router.push(path as never);
 

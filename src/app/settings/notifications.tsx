@@ -6,7 +6,7 @@ export default function Notifications() {
   const update = useApp((st) => st.updateSettings);
   return (
     <Screen scroll>
-      <Header title="Notifications" />
+      <Header title="Notifications" spaced />
       <Card style={{ paddingVertical: 4 }}>
         <ToggleRow label="New introductions" sub="When your next set is ready." value={s.notifIntroductions} onChange={(v) => update({ notifIntroductions: v })} />
         <ToggleRow label="Matches" sub="When you both choose to meet." value={s.notifMatches} onChange={(v) => update({ notifMatches: v })} />

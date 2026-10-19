@@ -10,7 +10,7 @@ import { usePerson } from '@/hooks/usePerson';
 import { showInterest } from '@/services/actions';
 import { decide } from '@/services/api';
 import { useApp } from '@/store/useApp';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
 
 /** Full profile view (from Likes, Chat header, or "Preview" of your own profile with id = "me"). */
 export default function ProfileView() {
@@ -54,7 +54,7 @@ export default function ProfileView() {
     <View style={{ flex: 1, backgroundColor: colors.white }}>
       <ScrollView contentContainerStyle={{ paddingBottom: 140 }}>
         {p.photos[0] ? <Image source={p.photos[0]} style={{ width: '100%', aspectRatio: 0.8, backgroundColor: colors.grey200 }} contentFit="cover" /> : <View style={{ height: 120 }} />}
-        <View style={{ padding: 16, marginTop: -24, backgroundColor: colors.white, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg }}>
+        <View style={{ padding: 16, paddingTop: 20, marginTop: -32, marginHorizontal: 16, backgroundColor: colors.base, borderRadius: 32 }}>
           <ProfileDetail p={p} onWhy={own ? undefined : () => router.push(`/why/${p.id}`)} />
         </View>
       </ScrollView>
@@ -68,7 +68,7 @@ export default function ProfileView() {
           <Button title="Message" onPress={() => router.replace(`/chat/${p.id}`)} />
         ) : (
           <Row gap={10}>
-            <Button title="Not for me" variant="secondary" style={{ flex: 1 }} onPress={() => { decide(p.id, 'pass').catch(() => {}); router.back(); }} />
+            <Button title="Not for me" variant="white" style={{ flex: 1, borderWidth: 1, borderColor: colors.grey900 }} onPress={() => { decide(p.id, 'pass').catch(() => {}); router.back(); }} />
             <Button
               title="Interested"
               style={{ flex: 1 }}

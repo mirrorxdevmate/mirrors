@@ -16,7 +16,7 @@ export default function EditProfile() {
 
   return (
     <Screen scroll>
-      <Header title="Edit profile" />
+      <Header title="Edit profile" spaced />
       <SectionLabel>Photos</SectionLabel>
       <PhotoGrid photos={p.photos} onChange={(photos) => photos.length && updateProfile({ photos })} />
       <T v="caption" color={colors.grey600} style={{ marginTop: 6 }}>

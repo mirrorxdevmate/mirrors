@@ -23,7 +23,8 @@ export const colors = {
   amber: '#F2A93B',
   gold500: '#DCC694',
   gold700: '#BEA56C',
-  overlay: 'rgba(19,24,33,0.55)',
+  overlay: 'rgba(0,0,0,0.4)',
+  otpBox: '#F3F5F6',
 } as const;
 
 export const text = {
@@ -38,7 +39,7 @@ export const text = {
 
 export const gradients = {
   mirrorPlus: ['#3B8BF5', '#1B5FD1'] as const,
-  premium: ['#F2B45A', '#D9822B'] as const,
+  premium: ['#F3C36A', '#C57326'] as const,
   greeting: ['#5E1414', '#B9503E', '#E9957C', '#B9503E', '#5E1414'] as const,
 };
 
@@ -48,9 +49,12 @@ export const space = { xs: 4, s: 8, m: 12, l: 16, xl: 20, xxl: 24, xxxl: 32 };
 export const fonts = {
   display: 'Fraunces_400Regular_Italic',
   heading: 'Urbanist_700Bold',
+  headingMedium: 'Urbanist_500Medium',
+  tagline: 'Taviraj_400Regular_Italic',
   headingSemi: 'Urbanist_600SemiBold',
   headingRegular: 'Urbanist_400Regular',
   body: 'Inter_400Regular',
+  bodyItalic: 'Inter_400Regular_Italic',
   bodyMedium: 'Inter_500Medium',
   bodySemi: 'Inter_600SemiBold',
 };

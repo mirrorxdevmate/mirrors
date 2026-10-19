@@ -14,7 +14,7 @@ export default function VerificationSettings() {
   ];
   return (
     <Screen scroll>
-      <Header title="Verification" />
+      <Header title="Verification" spaced />
       <T v="body" color={colors.grey700} style={{ marginBottom: 16 }}>
         Verification helps people feel more confident about who they&apos;re meeting. Only a verified/not-verified result is stored.
       </T>

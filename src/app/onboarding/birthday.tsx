@@ -32,6 +32,7 @@ export default function Birthday() {
   };
 
   const box = { flex: 1 } as const;
+  const dateBox = { height: 50, borderRadius: 8, paddingHorizontal: 8 } as const;
   return (
     <StepScreen
       step={1}
@@ -40,7 +41,7 @@ export default function Birthday() {
       sub="You must be 18 or older to use Mirror. Your exact birthday won't appear on your profile."
       canContinue={complete}
       onContinue={next}>
-      <View style={{ flexDirection: 'row', gap: 10 }}>
+      <View style={{ flexDirection: 'row', gap: 8 }}>
         <View style={box}>
           <Field
             value={d}
@@ -48,6 +49,7 @@ export default function Birthday() {
             keyboardType="number-pad"
             maxLength={2}
             textAlign="center"
+            boxStyle={dateBox}
             accessibilityLabel="Day"
             onChangeText={(t) => {
               setError('');
@@ -64,6 +66,7 @@ export default function Birthday() {
             keyboardType="number-pad"
             maxLength={2}
             textAlign="center"
+            boxStyle={dateBox}
             accessibilityLabel="Month"
             onChangeText={(t) => {
               setError('');
@@ -72,7 +75,7 @@ export default function Birthday() {
             }}
           />
         </View>
-        <View style={{ flex: 1.4 }}>
+        <View style={box}>
           <Field
             ref={yRef}
             value={y}
@@ -80,6 +83,7 @@ export default function Birthday() {
             keyboardType="number-pad"
             maxLength={4}
             textAlign="center"
+            boxStyle={dateBox}
             accessibilityLabel="Year"
             onChangeText={(t) => {
               setError('');
@@ -89,7 +93,7 @@ export default function Birthday() {
         </View>
       </View>
       {error ? (
-        <T v="body" color={colors.red}>
+        <T v="bodyM" color={colors.red} style={{ marginTop: 12 }}>
           {error}
         </T>
       ) : null}

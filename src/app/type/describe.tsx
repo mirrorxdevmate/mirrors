@@ -1,10 +1,10 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { TextInput, View } from 'react-native';
+import { Platform, StyleSheet, TextInput } from 'react-native';
 
-import { Button, Header, Screen, T, Title } from '@/components/ui';
+import { Button, Header, Screen, T } from '@/components/ui';
 import { useApp } from '@/store/useApp';
-import { colors, fonts, radius } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 export default function DescribeType() {
   const { edit } = useLocalSearchParams<{ edit?: string }>();
@@ -28,8 +28,7 @@ export default function DescribeType() {
           }}
         />
       }>
-      {edit ? <Header /> : <View style={{ height: 16 }} />}
-      <Title>Who catches your attention?</Title>
+      <Header title="Who catches your attention?" />
       <TextInput
         value={text}
         onChangeText={setText}
@@ -37,17 +36,17 @@ export default function DescribeType() {
         multiline
         maxLength={500}
         placeholder="Describe the kind of person you're usually attracted to…"
-        placeholderTextColor={colors.grey500}
-        style={{ minHeight: 180, backgroundColor: colors.base, borderRadius: radius.md, padding: 16, fontFamily: fonts.body, fontSize: 15, lineHeight: 22, color: colors.grey900, textAlignVertical: 'top' }}
+        placeholderTextColor={colors.grey600}
+        accessibilityLabel="Describe your type"
+        style={[st.area, Platform.OS === 'web' && ({ outlineStyle: 'none' } as object)]}
       />
-      <T v="caption" color={colors.grey600} style={{ marginTop: 10 }}>
+      <T v="body" color={colors.grey700} style={{ marginTop: 16 }}>
         You can mention age, personality, lifestyle, culture, values, appearance or anything that matters to you.
       </T>
-      {text.length > 0 && !ok ? (
-        <T v="caption" color={colors.grey700} style={{ marginTop: 6 }}>
-          A little more detail helps Mirror understand you.
-        </T>
-      ) : null}
     </Screen>
   );
 }
+
+const st = StyleSheet.create({
+  area: { marginTop: 24, height: 199, backgroundColor: colors.base, borderRadius: 16, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10, fontFamily: fonts.body, fontSize: 14, lineHeight: 20, color: colors.grey900, textAlignVertical: 'top' },
+});

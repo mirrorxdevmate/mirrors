@@ -1,6 +1,7 @@
 import { Fraunces_400Regular_Italic } from '@expo-google-fonts/fraunces';
-import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
-import { Urbanist_400Regular, Urbanist_600SemiBold, Urbanist_700Bold, useFonts } from '@expo-google-fonts/urbanist';
+import { Inter_400Regular, Inter_400Regular_Italic, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
+import { Taviraj_400Regular_Italic } from '@expo-google-fonts/taviraj';
+import { Urbanist_400Regular, Urbanist_500Medium, Urbanist_600SemiBold, Urbanist_700Bold, useFonts } from '@expo-google-fonts/urbanist';
 import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -25,9 +26,12 @@ const onSignedIn = (userId: string) => {
 function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Urbanist_400Regular,
+    Urbanist_500Medium,
+    Taviraj_400Regular_Italic,
     Urbanist_600SemiBold,
     Urbanist_700Bold,
     Inter_400Regular,
+    Inter_400Regular_Italic,
     Inter_500Medium,
     Inter_600SemiBold,
     Fraunces_400Regular_Italic,

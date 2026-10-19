@@ -1,14 +1,14 @@
 import { Feather } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Button, Header, LinkButton, Row, Screen, Segmented, T, Title } from '@/components/ui';
+import { Button, Header, LinkButton, Row, Screen, Segmented, T } from '@/components/ui';
 import { billingEnabled, buy, loadProducts, productId } from '@/lib/billing';
 import { PRICES } from '@/services/api';
 import { FEATURES, MONTHS, money, useCheckout } from '@/store/checkout';
 import { useApp, type Billing } from '@/store/useApp';
-import { colors, radius } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 export default function Plans() {
   const params = useLocalSearchParams<{ plan?: 'plus' | 'premium'; then?: string }>();
@@ -62,9 +62,13 @@ export default function Plans() {
           <LinkButton title="Not now" onPress={() => router.back()} />
         </>
       }>
-      <Header title="Upgrade" />
-      <Title sub="Cancel anytime. No hidden charges.">Choose your plan</Title>
+      <Header title="Upgrade" big={false} />
+      <Text style={st.h1}>Choose your plan</Text>
+      <T v="body" color={colors.grey700} style={{ marginTop: 16, marginBottom: 16 }}>
+        Cancel anytime. No hidden charges.
+      </T>
       <Segmented
+        compact
         value={billing}
         onChange={setBilling}
         options={[
@@ -84,20 +88,22 @@ export default function Plans() {
             accessibilityRole="radio"
             accessibilityState={{ checked: on }}
             onPress={() => setPick(k)}
-            style={{ backgroundColor: on ? colors.secondary : colors.base, borderRadius: radius.md, padding: 16, marginBottom: 12, borderWidth: on ? 1.5 : 0, borderColor: colors.primary }}>
+            style={[st.card, on && { backgroundColor: colors.secondary }]}>
             <Row>
-              <T v="h3" style={{ flex: 1 }}>
-                {k === 'plus' ? 'Mirror+' : 'Premium'}
-              </T>
+              <Text style={[st.cardTitle, { flex: 1 }]}>{k === 'plus' ? 'Mirror+' : 'Premium'}</Text>
               {current === k ? (
                 <T v="captionM" color={colors.primary}>
                   Current
                 </T>
+              ) : on ? (
+                <View style={st.checkOn}>
+                  <Feather name="check" size={10} color={colors.white} />
+                </View>
               ) : (
-                <Feather name={on ? 'check-circle' : 'circle'} size={20} color={on ? colors.primary : colors.grey500} />
+                <Feather name="check-circle" size={16} color={colors.grey800} />
               )}
             </Row>
-            <T v="bodyLM" style={{ marginTop: 6 }}>
+            <T v="bodyL" color={colors.grey800} style={{ marginTop: 16, lineHeight: 20 }}>
               {storePrices[productId.plan(k, billing)] ? `${storePrices[productId.plan(k, billing)]} / ${billing === 'monthly' ? 'month' : billing === 'annual' ? 'year' : '3 months'}` : `${money(per)} / month`}
             </T>
             {billing !== 'monthly' && !storePrices[productId.plan(k, billing)] ? (
@@ -105,10 +111,11 @@ export default function Plans() {
                 {money(total)} billed every {billing === 'annual' ? '12 months' : '3 months'}
               </T>
             ) : null}
-            <View style={{ marginTop: 10, gap: 4 }}>
+            <View style={{ marginTop: 16 }}>
               {FEATURES[k].map((f) => (
-                <T key={f} v="body" color={colors.grey800}>
-                  — {f}
+                <T key={f} v="bodyL" color={colors.grey800} style={{ lineHeight: 24 }}>
+                  {'  •  — '}
+                  {f}
                 </T>
               ))}
             </View>
@@ -118,3 +125,10 @@ export default function Plans() {
     </Screen>
   );
 }
+
+const st = StyleSheet.create({
+  h1: { fontFamily: fonts.heading, fontSize: 24, lineHeight: 28, color: colors.grey900, marginTop: 16 },
+  card: { backgroundColor: colors.base, borderRadius: 16, padding: 16, paddingTop: 20, paddingBottom: 20, marginBottom: 16 },
+  cardTitle: { fontFamily: fonts.heading, fontSize: 18, lineHeight: 24, color: colors.grey900 },
+  checkOn: { width: 16, height: 16, borderRadius: 8, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+});

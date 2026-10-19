@@ -80,6 +80,42 @@ export async function verifyOtp(email: string, code: string, sentAt: number) {
   }
 }
 
+/* ───────────────────────── auth (phone, demo) ───────────────────────── */
+// No SMS provider yet: any number works and the code is always 123456. The `phone-login` Edge Function
+// maps each number to one account (same number → same profile) and returns a session.
+// When Twilio/MessageBird is connected, switch these two calls to supabase.auth.signInWithOtp({ phone }).
+
+export async function sendPhoneCode(phone: string) {
+  if (phone.replace(/\D/g, '').length < 8) throw new ApiError('invalid_phone', 'Enter a valid phone number.');
+  await new Promise((r) => setTimeout(r, 500));
+  return { sentAt: Date.now() };
+}
+
+export async function verifyPhoneCode(phone: string, code: string, sentAt: number) {
+  if (Date.now() - sentAt > OTP_TTL_MS) throw new ApiError('expired', 'That code has expired.');
+  if (code !== DEV_OTP) throw new ApiError('invalid', "That code doesn't look right. Try again.");
+  const { data, error } = await supabase.functions.invoke('phone-login', { body: { phone, code } });
+  if (error || !data?.access_token) {
+    const ctx = (error as { context?: Response } | null)?.context;
+    const payload = ctx && typeof ctx.json === 'function' ? await ctx.json().catch(() => null) : null;
+    if (payload?.error === 'invalid_code') throw new ApiError('invalid', "That code doesn't look right. Try again.");
+    throw new ApiError('network', 'Check your connection or try again.');
+  }
+  const { error: sErr } = await supabase.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token });
+  if (sErr) throw new ApiError('network', 'Check your connection or try again.');
+}
+
+/** Demo: moves the signed-in account to a new phone number (same fixed code). */
+export async function changePhone(phone: string, code: string) {
+  if (code !== DEV_OTP) throw new ApiError('invalid', "That code doesn't look right. Try again.");
+  const { data, error } = await supabase.functions.invoke('phone-login', { body: { phone, code, mode: 'change' } });
+  if (error || !data?.ok) {
+    const ctx = (error as { context?: Response } | null)?.context;
+    const payload = ctx && typeof ctx.json === 'function' ? await ctx.json().catch(() => null) : null;
+    throw new ApiError(payload?.error ?? 'network', payload?.error === 'phone_taken' ? 'That number is already used by another account.' : 'Check your connection or try again.');
+  }
+}
+
 export async function signInWithPassword(email: string, password: string) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw new ApiError('invalid', 'Email or password is incorrect.');
