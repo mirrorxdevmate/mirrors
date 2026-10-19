@@ -157,9 +157,6 @@ export default function Otp() {
           </Pressable>
         )
       ) : null}
-      <T v="caption" color={colors.grey500} style={{ marginTop: 'auto', marginBottom: 4 }} center>
-        Demo mode · use code 123456
-      </T>
     </Screen>
   );
 }

@@ -21,7 +21,7 @@ export default function Incognito() {
         <Badge kind="premium" />
       </Row>
       <Row style={{ marginTop: 24, justifyContent: 'space-between' }}>
-        <Text style={[st.label, dim && { color: colors.grey600 }]}>Incognito Mode</Text>
+        <Text style={[st.label, dim && { color: colors.grey600 }]}>See your pattern over time</Text>
         <Toggle label="Incognito Mode" value={on && unlocked} disabled={!unlocked} onChange={(v) => updateSettings({ incognito: v })} />
       </Row>
       <T v="body" color={dim ? colors.grey400 : colors.grey700} style={{ marginTop: 8 }}>

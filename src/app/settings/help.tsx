@@ -3,7 +3,9 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Pressable } from 'react-native';
 
-import { Button, Card, Header, Row, Screen, T } from '@/components/ui';
+import { Dialog } from '@/components/overlays';
+import { Button, Card, Header, LinkButton, Row, Screen, T } from '@/components/ui';
+import { signOut } from '@/services/api';
 import { colors } from '@/theme';
 
 const FAQ = [
@@ -17,6 +19,7 @@ const FAQ = [
 
 export default function Help() {
   const [open, setOpen] = useState<number | null>(0);
+  const [confirmSignOut, setSignOut] = useState(false);
   return (
     <Screen scroll>
       <Header title="Help" spaced />
@@ -38,7 +41,22 @@ export default function Help() {
         </Card>
       ))}
       <Button title="Contact support" style={{ marginTop: 12 }} onPress={() => Linking.openURL('mailto:support@mirror.app?subject=Help%20with%20Mirror')} />
-      <Button title="Terms & Privacy" variant="ghost" onPress={() => router.push({ pathname: '/legal', params: { doc: 'terms' } })} />
+      <LinkButton title="Terms & Privacy" style={{ marginTop: 16 }} onPress={() => router.push({ pathname: '/legal', params: { doc: 'terms' } })} />
+      <Button title="Sign out" variant="outline" style={{ marginTop: 24 }} onPress={() => setSignOut(true)} />
+      <Dialog
+        visible={confirmSignOut}
+        title="Sign out?"
+        message="You can sign back in with your phone number at any time."
+        primary={{
+          label: 'Sign out',
+          onPress: () => {
+            setSignOut(false);
+            signOut(); // the root layout resets local data and returns to Welcome
+          },
+        }}
+        secondary={{ label: 'Cancel', onPress: () => setSignOut(false) }}
+        onClose={() => setSignOut(false)}
+      />
     </Screen>
   );
 }

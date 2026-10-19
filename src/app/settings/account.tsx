@@ -1,9 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
-
-import { Dialog } from '@/components/overlays';
-import { Card, Header, LinkButton, ListRow, Screen } from '@/components/ui';
-import { signOut } from '@/services/api';
+import { Card, Header, ListRow, Screen } from '@/components/ui';
 import { useApp } from '@/store/useApp';
 
 /** "+971501234567" → "+971 50 •••• 567" */
@@ -15,7 +11,6 @@ const maskPhone = (v: string) => {
 export default function Account() {
   const p = useApp((s) => s.profile);
   const paused = useApp((s) => s.paused);
-  const [confirmSignOut, setSignOut] = useState(false);
 
   return (
     <Screen scroll>
@@ -27,22 +22,6 @@ export default function Account() {
         <ListRow label="Account status" value={paused ? 'Paused' : 'Active'} onPress={paused ? () => useApp.getState().setPaused(false) : undefined} />
         <ListRow label="Delete account" last onPress={() => router.push('/settings/delete-account')} />
       </Card>
-      <LinkButton title="Sign out" style={{ marginTop: 24 }} onPress={() => setSignOut(true)} />
-      <Dialog
-        visible={confirmSignOut}
-        title="Sign out?"
-        message="You can sign back in with your phone number at any time."
-        primary={{
-          label: 'Sign out',
-          onPress: () => {
-            setSignOut(false);
-            // Your profile stays on the server; signing back in with this number resumes it.
-            signOut(); // the root layout resets local data and returns to Welcome
-          },
-        }}
-        secondary={{ label: 'Cancel', onPress: () => setSignOut(false) }}
-        onClose={() => setSignOut(false)}
-      />
     </Screen>
   );
 }
